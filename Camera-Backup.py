@@ -6,6 +6,7 @@
 #
 # Created:     12/08/2020
 # Copyright:   (c) John Eichenberger 2020
+# Licence:     GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
 #-------------------------------------------------------------------------------
 
 dir_archives = "\\Pictures" # the default destination for photo archives
