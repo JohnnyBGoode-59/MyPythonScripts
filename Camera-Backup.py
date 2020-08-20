@@ -8,18 +8,9 @@
 # Copyright:   (c) John Eichenberger 2020
 #-------------------------------------------------------------------------------
 
-dir_archives = "\\Pictures"
-archive_exts = ['.jpg', '.JPG',
-                '.jpeg', 'JPEG',
-                '.avi', '.AVI',
-                '.bmp', '.BMP',
-                '.mpg', '.MPG',
-                '.mp3', 'MP3',
-                '.mp4', '.MP4',
-                '.mov', '.MOV',
-                '.heic', '.HEIC',
-                '.png', '.PNG',
-                '.3gp', '.3GP']
+dir_archives = "\\Pictures" # the default destination for photo archives
+archive_exts = ['.jpg', '.jpeg',  '.avi',  '.bmp',  '.mpg',  '.mp3',  '.mp4',
+                '.mov',  '.heic',  '.png',  '.3gp']
 found = 0
 archived = 0
 
@@ -29,95 +20,6 @@ from PIL import Image
 from PIL.ExifTags import TAGS
 
 from EXIF_Dating import GetExifDate
-
-def date(fn):
-    """ Use a series of regular expressions to extract the date from a filename """
-    months = [ "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ]
-
-    # Start with standard Android photo names
-    d = re.search("IMG_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_", fn)
-    if d is not None:
-        return [ d.group(0)[4:8], d.group(0)[8:10], d.group(0)[10:12] ]
-
-    # Include standard Android video names
-    d = re.search("VID_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_", fn)
-    if d is not None:
-        return [ d.group(0)[4:8], d.group(0)[8:10], d.group(0)[10:12] ]
-
-    # Include files that start with yyyy-mm-dd in the name
-    # Note: This is the format used by photo-renamer.py
-    d = re.search("^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]", fn)
-    if d is not None:
-        return [ d.group(0)[0:4], d.group(0)[5:7], d.group(0)[8:10] ]
-
-    # Try to access EXIF data
-    # Note: if the date has been messed up the file can be renamed
-    # using one of the name formats above in order to ignore the EXIF data
-    d = get_date_taken(fn)
-    if d is not None:
-        return [ d[0:4], d[5:7], d[8:10] ]
-
-    # Include files that start with yyyy_mmdd or yyyy-mmdd in the name
-    d = re.search("^[0-9][0-9][0-9][0-9][_-][0-9][0-9][0-9][0-9]", fn)
-    if d is not None:
-        return [ d.group(0)[0:4], d.group(0)[5:7], d.group(0)[7:9] ]
-
-    # Include files that include Mon-dd-yyyy in the name
-    for m in range(len(months)):
-        d = re.search(months[m]+"-[0-9][0-9]-[0-9][0-9][0-9][0-9]", fn)
-        if d is not None:
-            return [ d.group(0)[7:11], ('0'+str(m+1))[-2:], d.group(0)[4:6] ]
-
-    # Include files that include yyyy-mm-dd in the name
-    # so long as yyyy starts with 19 or 20, mm is less than 13,
-    # and dd is less than 32
-    for m in (['19', '20']):
-        d = re.search(m+"[0-9][0-9]-[0-9][0-9]-[0-9][0-9]", fn)
-        if d is not None:
-            year = d.group(0)[0:4]
-            mon = d.group(0)[5:7]
-            day = d.group(0)[8:10]
-            if int(mon) < 13 and int(day) < 32:
-                return [ year, mon, day ]
-
-    # Include files that start with yyyymmddhhmmss in the name
-    # so long as yyyy starts with 19 or 20, mm is less than 13,
-    # and dd is less than 32
-    for m in (['^19', '^20']):
-        d = re.search(m+"[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]", fn)
-        if d is not None:
-            year = d.group(0)[0:4]
-            mon = d.group(0)[4:6]
-            day = d.group(0)[6:8]
-            if int(mon) < 13 and int(day) < 32:
-                return [ year, mon, day ]
-
-    # Include files that start with yyyymmdd in the name
-    # so long as yyyy starts with 19 or 20, mm is less than 13,
-    # and dd is less than 32
-    for m in (['^19', '^20']):
-        d = re.search(m+"[0-9][0-9][0-9][0-9][0-9][0-9]", fn)
-        if d is not None:
-            year = d.group(0)[0:4]
-            mon = d.group(0)[4:6]
-            day = d.group(0)[6:8]
-            if int(mon) < 13 and int(day) < 32:
-                return [ year, mon, day ]
-
-    # Include files that start with mmddyy in the name
-    # so long as yy is less than 50, mm is less than 13,
-    # and dd is less than 32
-    d = re.search("^[0-9][0-9][0-9][0-9][0-9][0-9]", fn)
-    if d is not None:
-        year = d.group(0)[4:6]
-        mon = d.group(0)[0:2]
-        day = d.group(0)[2:4]
-        if int(year) < 50 and int(mon) < 13 and int(day) < 32:
-            return [ '20'+year, mon, day ]
-        d = None
-
-    return d
 
 def make_path(pn):
     """ Create all folders required to create a full pathname to a folder """
@@ -145,7 +47,7 @@ def archive(pn):
     # only archive some types of files
     found = found + 1
     path, ext = os.path.splitext(pn)
-    if ext not in archive_exts:
+    if ext.lower() not in archive_exts:
         print("Not archiving {}".format(fn))
         return
 
@@ -165,12 +67,12 @@ def archive(pn):
     make_path(folder)
     rootp, fn = os.path.split(pn)
     try:
-        os.rename(fn, folder + '\\' + fn)
+        os.rename(pn, folder + '\\' + fn)
         archived = archived + 1
     except:
-        print("{} could not be archived to {}".format(fn, folder))
+        print("{} could not be archived to {}".format(pn, folder))
         return
-    print("{} archived to {}".format(fn, folder))
+    print("{} archived to {}".format(pn, folder))
 
 def archive_everything(pn):
     """ find everything and archive all pictures and movies """
@@ -182,25 +84,32 @@ def archive_everything(pn):
         print("{} is not a folder".format(pn))
 
 def main(pn):
-    global found, archived
+    global dir_archives, found, archived
+
+    # Archive to "%Photos%" when it is defined
+    home = os.environ.get('Photos')
+    if home is None:
+        # Or archive to ~/Photos
+        home = os.environ.get('USERPROFILE')
+        if home is not None:
+            home = home + '\\Pictures'
+            if not os.path.exists(home):
+                home = None
+
+    # Archive to the home folder defined above if it is on the same drive
+    # Otherwise use the program default location which has no drive letter
+    if home is not None and home[:2] == pn[:2]:
+        dir_archives = home
+
+    # Start archiving
     archive_everything(pn)
     print("Found {} and archived {}".format(found, archived))
 
 if __name__ == '__main__':
-    # if a command line parameter is supplied it is used
-    # as the name of the folder to archive
+    # if a command line parameter is supplied
     if len(sys.argv) > 1:
-        os.chdir(sys.argv[1])
-
-    # Archive to ~/Photos or /Pictures
-    home = os.environ.get('USERPROFILE')
-    cwd = os.getcwd()
-    if cwd[1:2] == ':' and home[:2] == cwd[:2]:
-        # Running on the same drive as ~/Photos
-        if os.path.exists(home + '\\Pictures'):
-            dir_archives = home + '\\Pictures'
-
-    if len(sys.argv) > 1:
-        main(sys.argv[1])
+        # it is used as the name of the folder to archive
+        main(os.path.abspath(sys.argv[1]))
     else:
+        # otherwise the current folder is used
         main(os.getcwd())
