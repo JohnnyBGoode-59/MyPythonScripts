@@ -90,12 +90,20 @@ def GetFileDate(fn):
                 today[i] = m.group(i+1)
         return today
 
-    # yyyy-mm-dd_ (yyyy must start with 19 or 20)
+    # IMG_yyyy-mm-dd_ (yyyy must start with 19 or 20)
     m = re.search("^([A-Z])*?_"+yyyy+mm+dd, fn)
     if m is not None:
         for i in range(3):
             if m.group(i+2) is not None:
                 today[i] = m.group(i+2)
+        return today[:3]
+
+    # yyyy-mm-dd_ (yyyy must start with 19 or 20)
+    m = re.search("^"+yyyy+mm+dd, fn)
+    if m is not None:
+        for i in range(2):
+            if m.group(i+1) is not None:
+                today[i] = m.group(i+1)
         return today[:3]
 
     return None
