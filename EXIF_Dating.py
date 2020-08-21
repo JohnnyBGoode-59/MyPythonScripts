@@ -22,7 +22,7 @@ def get_exif(fn):
     try:
         i = Image.open(fn)
     except:
-        print("failed: Image.open({})".format(fn))
+        #dbg print("failed: Image.open({})".format(fn))
         return ret
     try:
         info = i._getexif()
@@ -33,12 +33,12 @@ def get_exif(fn):
     if info is not None:
         for tag, value in info.items():
             decoded = TAGS.get(tag, tag)
-            # if decoded != tag:
-            #    print("{} {}({})={}".format(fn, decoded, tag, value))
+            #dbg if decoded != tag:
+            #dbg    print("{} {}({})={}".format(fn, decoded, tag, value))
             ret[decoded] = value
-        # print("{} has {} EXIF data elements".format(fn, len(ret)))
+        #dbg print("{} has {} EXIF data elements".format(fn, len(ret)))
     else:
-        # print("{} has no EXIF data".format(fn))
+        #dbg print("{} has no EXIF data".format(fn))
         pass
     return ret
 
@@ -69,8 +69,6 @@ def SetExifDate(pn, date):
 
     # Replace the original file with the new file and exif
     im = Image.open(pn)
-    # im.close()
-    # os.remove(pn)
     im.save(pn, "jpeg", exif=exif_encoded)
     return
 
@@ -93,11 +91,11 @@ def GetFileDate(fn):
         return today
 
     # yyyy-mm-dd_ (yyyy must start with 19 or 20)
-    m = re.search("^"+yyyy+mm+dd, fn)
+    m = re.search("^([A-Z])*?_"+yyyy+mm+dd, fn)
     if m is not None:
         for i in range(3):
-            if m.group(i+1) is not None:
-                today[i] = m.group(i+1)
+            if m.group(i+2) is not None:
+                today[i] = m.group(i+2)
         return today[:3]
 
     return None

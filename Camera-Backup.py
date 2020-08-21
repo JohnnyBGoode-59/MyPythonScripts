@@ -59,7 +59,7 @@ def archive(pn):
     if date is not None:
         year = date[0]
         month = months[int(date[1])-1]
-        # print("The date in {} is {}".format(fn, ymd))
+        #dbg print("The date in {} is {}".format(fn, ymd))
         folder = dir_archives + '\\' + year + '\\' + month
     else:
         print("No date found to archive {}".format(fn))

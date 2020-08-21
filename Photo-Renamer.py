@@ -36,21 +36,24 @@ def rename(pn):
             return
 
         # set the EXIF date
-        print("Add a date to {}".format(pn))
-        SetExifDate(pn, file_date)
-        dated = dated + 1
+        try:
+            SetExifDate(pn, file_date)
+            print("Added date to {}".format(pn))
+            dated = dated + 1
+        except:
+            print("{} cannot be updated".format(pn))
         return
 
     else:
         # If the two dates match, do nothing
         if file_date is not None:
-            if (exif_date[:len(file_date)] == file_date):
+            # Just compare dates, not times
+            if (exif_date[:3] == file_date[:3]):
                 print("{} is well named".format(pn))
                 return
 
     # Define the new prefix for the filename
-    # prefix = d[0:4]+'-'+d[5:7]+'-'+d[8:10]+'_'+d[11:13]+'-'+d[14:16]+'-'+d[17:19]+'_' # yyyy-dd-mm_hhmmss_
-    prefix = exif_date[0]+'-'+exif_date[1]+exif_date[2]+'_'+exif_date[3]+exif_date[4]+exif_date[5]+'_'
+    prefix = exif_date[0]+'-'+exif_date[1]+exif_date[2]+'_'
 
     # Don't rename a file that is already renamed (this should be redundant now)
     if fn[0:len(prefix)] == prefix:
@@ -58,15 +61,40 @@ def rename(pn):
         return
 
     # Remove any previous date prefix
-    m = re.search("^([0-9~_\-\.]*)(.*)", fn)
-    if m is not None:
-        fn = m.group(2)
+    if file_date is not None:
+        sep = "[\-\._~ ]*?" # optional separators: the dash has to be escaped
+        date_group = '('+file_date[0]+sep+file_date[1]+sep+file_date[2]+')'
+        m = re.search("^([A-Z])*?_"+date_group+"(.*)", fn)
+        if m is not None and len(m.groups()) == 3:
+            fn = m.group(3)     # 1=prefix, 2=date, 3=filename.ext
+            if len(fn) < 4:     # period in file extension may get stripped
+                fn = '.'+fn
+                prefix = prefix[:-1]
+            if fn[0]=='_':
+                fn = fn[1:]
+            print('Truncated filename: {}'.format(fn))
 
-    # Rename
-    newname = prefix + fn
-    os.rename(pn, rootp + '\\' + newname)
-    renamed = renamed + 1
-    print("{} renamed {}".format(pn, newname))
+    # Rename the file to match the date
+    # If a matching file exists, add a number to make the new file unique
+    for i in range(10): # limit of ten duplicates
+        filename, ext = os.path.splitext(prefix+fn)
+        if i == 0:
+            number = ''
+        else:
+            number = '('+str(i)+')'
+        newname = rootp + '\\' + filename + number + ext
+        if(os.path.isfile(newname)):
+            continue
+        try:
+            os.rename(pn, newname)
+            renamed = renamed + 1
+            print("{} renamed {}".format(pn, newname))
+        except:
+            print("{} cannot be renamed {}".format(pn, newname))
+        break
+
+    if i > 9:
+        print("{} cannot be renamed {}".format(pn, newname))
 
 def rename_everything(pn):
     """ find everything and archive all pictures and movies """
