@@ -105,7 +105,7 @@ def GetFileDate(fn):
     # yyyy-mm-dd_ (yyyy must start with 19 or 20)
     m = re.search("^"+yyyy+mm+dd, fn)
     if m is not None:
-        for i in range(2):
+        for i in range(3):
             if m.group(i+1) is not None:
                 today[i] = m.group(i+1)
         return today[:3]
