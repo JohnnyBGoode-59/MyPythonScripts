@@ -60,7 +60,7 @@ def rename(pn, strip, reset):
                     return
 
         # Define the new prefix for the filename
-        prefix = exif_date[0]+'-'+exif_date[1]+exif_date[2]+'_'
+        prefix = exif_date[0]+'_'+exif_date[1]+exif_date[2]+'_'
 
         # Don't rename a file that is already renamed (this should be redundant now)
         if fn[0:len(prefix)] == prefix:

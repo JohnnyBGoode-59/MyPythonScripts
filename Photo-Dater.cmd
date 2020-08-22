@@ -16,7 +16,7 @@ set Folder=_Temp_%RANDOM%_
 md %Folder%
 for %%f in (%2) do (
 	cd %Folder%
-	move ..\%%f . >nul
+	move "..\%%f" . >nul
 	echo ren "%%f" "%Prefix%_%%f"
 	ren "%%f" "%Prefix%_%%f"
 	cd ..
