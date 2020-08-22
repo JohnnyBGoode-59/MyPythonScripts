@@ -49,7 +49,7 @@ def archive(pn):
     found = found + 1
     path, ext = os.path.splitext(pn)
     if ext.lower() not in archive_exts:
-        print("Not archiving {}".format(fn))
+        print("Not archiving {}".format(pn))
         return
 
     # Decide where to archive the file
@@ -62,7 +62,7 @@ def archive(pn):
         #dbg print("The date in {} is {}".format(fn, ymd))
         folder = dir_archives + '\\' + year + '\\' + month
     else:
-        print("No date found to archive {}".format(fn))
+        print("No date found to archive {}".format(pn))
         return
 
     make_path(folder)

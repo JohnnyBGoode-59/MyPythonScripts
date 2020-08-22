@@ -46,9 +46,7 @@ def GetExifDate(pn):
     """ Get a date from a picture using EXIF data """
     exif = get_exif(pn)
     # print(exif)
-    ret = exif.get('DateTime')
-    if ret is None:
-        ret = exif.get('DateTimeOriginal')
+    ret = exif.get('DateTimeOriginal')
     if ret is None:
         ret = exif.get('DateTimeDigitized')
     if ret is not None:
@@ -62,9 +60,15 @@ def SetExifDate(pn, date):
     else:
         dstr = date[0]+':'+date[1]+':'+date[2]+' 12:00:00'
 
-    # Add DateTimeOriginal to the Exif data
+    # Add DateTimeOriginal and DateTimeDigitized to the Exif data
+    DATE_TIME_ORIGINAL = 36867
+    DATE_TIME_DIGITIZED = 36868
     exif = piexif.load(pn)
-    exif['Exif'][36867] = dstr  # "DateTimeOriginal"
+    dstr = bytes(dstr, 'utf-8')
+    for tag in [DATE_TIME_ORIGINAL, DATE_TIME_DIGITIZED]:
+        if 'Exif' in exif and tag in exif['Exif']:
+            dstr = dstr[:11]+exif['Exif'][tag][11:]
+        exif['Exif'][tag] = dstr
     exif_encoded = piexif.dump(exif)
 
     # Replace the original file with the new file and exif
