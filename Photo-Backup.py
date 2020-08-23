@@ -20,7 +20,7 @@ import glob, re, os, sys
 from PIL import Image
 from PIL.ExifTags import TAGS
 
-from EXIF_Dating import GetExifDate
+from EXIF_Dating import GetExifDate, GetFileDate
 
 def make_path(pn):
     """ Create all folders required to create a full pathname to a folder """
@@ -41,7 +41,7 @@ def make_path(pn):
     os.mkdir(pn)
     return
 
-def archive(pn):
+def archive(pn, useFileDate):
     """ Archive one picture or movie in it's proper place """
     global dir_archives, found, archived, archive_exts
 
@@ -56,6 +56,10 @@ def archive(pn):
     months = [ "01Jan", "02Feb", "03Mar", "04Apr", "05May", "06Jun",
                "07Jul", "08Aug", "09Sep", "10Oct", "11Nov", "12Dec" ]
     date = GetExifDate(pn)
+    if date is None:
+        if useFileDate:
+            rootp, fn = os.path.split(pn)
+            date = GetFileDate(fn)
     if date is not None:
         year = date[0]
         month = months[int(date[1])-1]
@@ -75,16 +79,16 @@ def archive(pn):
         return
     print("{} archived to {}".format(pn, folder))
 
-def archive_everything(pn):
+def archive_everything(pn, useFileDate):
     """ find everything and archive all pictures and movies """
     if(os.path.isdir(pn)):
         for fn in glob.glob(pn + "\\*"):
             if(not os.path.isdir(fn)):
-                archive(fn)
+                archive(fn, useFileDate)
     else:
         print("{} is not a folder".format(pn))
 
-def main(pn):
+def main(pn, useFileDate):
     global dir_archives, found, archived
 
     # Archive to "%Photos%" when it is defined
@@ -99,18 +103,22 @@ def main(pn):
 
     # Archive to the home folder defined above if it is on the same drive
     # Otherwise use the program default location which has no drive letter
-    if home is not None and home[:2] == pn[:2]:
+    if home is not None and home[:2].lower() == pn[:2].lower():
         dir_archives = home
 
     # Start archiving
-    archive_everything(pn)
+    archive_everything(pn, useFileDate)
     print("Found {} and archived {}".format(found, archived))
 
 if __name__ == '__main__':
-    # if a command line parameter is supplied
-    if len(sys.argv) > 1:
-        # it is used as the name of the folder to archive
-        main(os.path.abspath(sys.argv[1]))
-    else:
-        # otherwise the current folder is used
-        main(os.getcwd())
+    """ Process command line arguments """
+    path = os.getcwd(); # <path>: use a path other than the current working directory
+    useFileDate = False # -f: use a filename date when no exif date is available
+    for arg in sys.argv[1:]:
+        if arg[0] == '-':
+            if arg[1].lower() == 'f':
+                useFileDate = True
+        elif os.path.isdir(arg):
+            path = os.path.abspath(arg)
+
+    main(path, useFileDate)
