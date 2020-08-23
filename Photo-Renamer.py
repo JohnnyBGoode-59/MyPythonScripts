@@ -70,15 +70,16 @@ def rename(pn, strip, reset):
         # Remove any previous date prefix
         if file_date is not None:
             date_group = '('+file_date[0]+sep+file_date[1]+sep+file_date[2]+')'
-            m = re.search("^([A-Z])*?_"+date_group+"(.*)", fn)
+            m = re.search("^([A-Z])*?"+sep+date_group+"(.*)", fn)
             if m is not None and len(m.groups()) == 3:
                 fn = m.group(3)     # 1=prefix, 2=date, 3=filename.ext
                 if len(fn) < 4:     # period in file extension may get stripped
                     fn = '.'+fn
                     prefix = prefix[:-1]
-                if fn[0]=='_':
-                    fn = fn[1:]
-                print('Truncated filename: {}'.format(fn))
+                else:
+                    m = re.search("^([\-\._~ ])*(.*)", fn)
+                    fn = m.group(2)
+                #dbg print('Truncated filename: {}'.format(fn))
 
     else: # Simply strip the previous datestamps
         prefix = ""

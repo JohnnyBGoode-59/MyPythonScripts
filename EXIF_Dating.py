@@ -63,7 +63,10 @@ def SetExifDate(pn, date):
     # Add DateTimeOriginal and DateTimeDigitized to the Exif data
     DATE_TIME_ORIGINAL = 36867
     DATE_TIME_DIGITIZED = 36868
-    exif = piexif.load(pn)
+    try:
+        exif = piexif.load(pn)
+    except:
+        exif = {}
     dstr = bytes(dstr, 'utf-8')
     for tag in [DATE_TIME_ORIGINAL, DATE_TIME_DIGITIZED]:
         if 'Exif' in exif and tag in exif['Exif']:
