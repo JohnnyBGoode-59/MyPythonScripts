@@ -50,7 +50,16 @@ def GetExifDate(pn):
     if ret is None:
         ret = exif.get('DateTimeDigitized')
     if ret is not None:
-        ret = [ ret[0:4], ret[5:7], ret[8:10], ret[11:13], ret[8:10], ret[11:13] ]
+        # validate the date returned, it can be corrupt
+        yr='(19[0-9][0-9]|20[0-9][0-9])'
+        mon=':[0-1][0-9]'
+        day=':[0-3][0-9]'
+        hr=' [0-2][0-9]'
+        minute=sec=':[0-6][0-9]'
+        m = re.search(yr+mon+day+hr+minute+sec, ret)
+        if m is not None:
+            return [ ret[0:4], ret[5:7], ret[8:10], ret[11:13], ret[8:10], ret[11:13] ]
+        return None
     return ret
 
 def SetExifDate(pn, date):
