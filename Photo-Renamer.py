@@ -147,6 +147,6 @@ if __name__ == '__main__':
             elif arg[1].lower() == 'r':
                 reset = True
         elif os.path.isdir(arg):
-            path = arg
+            path = os.path.abspath(arg)
 
     main(path, strip, reset)
