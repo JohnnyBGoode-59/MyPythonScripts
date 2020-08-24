@@ -80,6 +80,11 @@ def rename(pn, strip, reset):
                     m = re.search("^([\-\._~ ])*(.*)", fn)
                     fn = m.group(2)
                 #dbg print('Truncated filename: {}'.format(fn))
+        else:
+            # Strip any a prefix that has just the year
+            m = re.search("^(19|20)[0-9][0-9]"+sep[:-1]+"(.*)", fn)
+            if m is not None:
+                fn = m.groups()[-1]
 
     else: # Simply strip the previous datestamps
         prefix = ""
