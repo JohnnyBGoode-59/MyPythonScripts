@@ -45,8 +45,12 @@ def rename(pn, strip, reset):
             # set the EXIF date
             try:
                 SetExifDate(pn, file_date)
-                print("Added date to {}".format(pn))
-                dated = dated + 1
+                exif_date = GetExifDate(pn)
+                if exif_date is not None:
+                    print("Added date to {}".format(pn))
+                    dated = dated + 1
+                else:
+                    print("Date cannont be added to {}".format(pn))
             except:
                 print("{} cannot be updated".format(pn))
             return

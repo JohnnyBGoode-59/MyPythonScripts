@@ -17,9 +17,6 @@ archived = 0
 
 import glob, re, os, sys
 
-from PIL import Image
-from PIL.ExifTags import TAGS
-
 from EXIF_Dating import GetExifDate, GetFileDate
 
 def make_path(pn):
