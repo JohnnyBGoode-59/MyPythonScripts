@@ -31,7 +31,7 @@ def crc32pn(pn, recursive):
             # Compute the CRC for each file in a folder
             # or each file in a subfolder if -r is specified
             if not os.path.isdir(fn) or recursive:
-                main(fn, recursive)
+                crc32pn(fn, recursive)
     else:
         # Compute the CRC for one file
         rootp, fn = os.path.split(pn)
