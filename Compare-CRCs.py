@@ -12,14 +12,16 @@
 import glob, os, sys, zlib
 
 duplicates = 0
+removed = 0
+deleted = 0
 
 def main(crcfile):
-    global duplicates
-    crcs = {}
+    global duplicates, removed, deleted
 
     # Read the CRC file to create a dictionary
     f = open(crcfile)
     next(f) # skip header line
+    crcs = {}
     for line in f:
         sline = line.split(',')
         crc = sline[0]
@@ -29,20 +31,39 @@ def main(crcfile):
 
         # Add one dictionary value
         if crc in crcs:
-            crcs[crc]['count'] += 1
-            crcs[crc]['pns'] += [pn]
+            crcs[crc] += [pn]
             duplicates += 1
         else:
-            crcs[crc] = {}
-            crcs[crc]['count'] = 1
-            crcs[crc]['pns'] = [pn]
+            crcs[crc] = [pn]
     f.close()
 
-    # Print duplicates
+    # Print duplicates, select which one to keep, delete the others
     for crc in crcs:
-        if crcs[crc]['count'] > 1:
-            for pn in crcs[crc]['pns']:
-                print("{},{}".format(crc,pn))
+        # Check to make sure duplicates still exist
+        if len(crcs[crc]) > 1:
+            for pn in crcs[crc]:
+                if not os.path.isfile(pn):
+                    crcs[crc].remove(pn)
+                    removed += 1
+
+            # Select duplicates to delete
+            while len(crcs[crc]) > 1:
+                # Display the list
+                for i in range(len(crcs[crc])):
+                    print('{}: {}'.format(i, crcs[crc][i]))
+                try:
+                    num = input("Select a file to remove: ")
+                    if num == "":
+                        num = None
+                        break
+
+                    # Remove one file
+                    pn = crcs[crc][int(num)]
+                    os.remove(pn)
+                    crcs[crc].remove(pn)
+                    deleted += 1
+                except:
+                    pass
 
 if __name__ == '__main__':
     """ Compare-CRCs {filename}
@@ -67,3 +88,5 @@ if __name__ == '__main__':
 
     main(filespec)
     print("{} duplicate CRC's found".format(duplicates))
+    print("{} were previously deleted".format(removed))
+    print("{} were just deleted".format(deleted))
