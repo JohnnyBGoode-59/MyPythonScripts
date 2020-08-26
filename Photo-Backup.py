@@ -9,20 +9,56 @@
 # Licence:     GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
 #-------------------------------------------------------------------------------
 
-dir_archives = "\\Pictures" # the default destination for photo archives
-archive_exts = ['.jpg', '.jpeg',  '.avi',  '.bmp',  '.mpg',  '.mp3',  '.mp4',
-                '.mov',  '.heic',  '.png',  '.3gp']
+archive_pictures = "\\Pictures" # the default destination for photo archives
+picture_exts = ['.jpg', '.jpeg',  '.heic',  '.png']
+
+archive_videos = "\\Movies" # the default destination for movie archives
+movie_exts = ['.avi',  '.mpg',  '.mp3',  '.mp4', '.mov',  '.3gp']
+
 months = [ "01Jan", "02Feb", "03Mar", "04Apr", "05May", "06Jun",
             "07Jul", "08Aug", "09Sep", "10Oct", "11Nov", "12Dec" ]
 
-found = 0
-archived = 0
-removed = 0 # files with matching CRC are removed
+crcs = {}       # a dictionary of previously backed up files
+
+found = 0       # Count files found
+archived = 0    # Count files archived
+removed = 0     # Count files removed due to matching CRC
+filespec = "\\*"# which files get archived?
 
 import glob, re, os, sys
 from crc32 import crc32
 
 from EXIF_Dating import GetExifDate, GetFileDate
+
+def read_crcs():
+    global crcs
+
+    # Read %Pictures%/crc.txt when it is present
+    pn = os.environ.get('Pictures')
+    if pn is None:
+        # Or ~/Photos/Pictures/crc.txt
+        pn = os.environ.get('USERPROFILE')
+        if pn  is None:
+            # Or /Pictures/crc.txt
+            filespec = '\\Pictures'
+    pn = os.path.expandvars(pn+"\\crc.txt")
+
+    # Read the CRC file to create a dictionary
+    if not os.path.isfile(pn):
+        return
+    f = open(pn)
+    next(f) # skip header line
+    for line in f:
+        sline = line.split(',')
+        crc = sline[0]
+        sline = line.split('"')
+        fn = sline[1]
+        pn = sline[3]
+
+        # Add one dictionary value per crc
+        if crc not in crcs:
+            crcs[crc] = [pn]
+    f.close()
 
 def make_path(pn):
     """ Create all folders required to create a full pathname to a folder """
@@ -43,41 +79,56 @@ def make_path(pn):
     os.mkdir(pn)
     return
 
-def archive(pn, useFileDate, recursive):
+def archive(pn, recursive):
     """ Archive one picture or movie in it's proper place """
-    global dir_archives, archive_exts, months, found, archived, removed
+    global archive_pictures, picture_exts
+    global archive_videos, movie_exts
+    global months, found, archived, removed, crcs
 
     # Optionally process folders recursively
     if os.path.isdir(pn):
         if recursive:
-            for fn in glob.glob(pn + "\\*"):
-                archive(fn, useFileDate, recursive)
+            for fn in glob.glob(pn + filespec):
+                if os.path.isfile(fn):
+                    archive(fn, recursive)
+            for fn in glob.glob(pn + '\\*'):
+                if os.path.isdir(fn):
+                    archive(fn, recursive)
         return
 
     # only archive some types of files
-    path, ext = os.path.splitext(pn)
-    if ext.lower() not in archive_exts:
+    rootp, ext = os.path.splitext(pn)
+    rootp, fn = os.path.split(pn)
+    if ext.lower() not in picture_exts + movie_exts:
         print("Not archiving {}".format(pn))
         return
     found = found + 1
 
+    # If a duplicate CRC exists then delete this file
+    crc = crc32(pn)
+    if crc in crcs:
+        if os.path.isfile(crcs[crc]):
+            os.remove(pn)
+            removed += 1
+            print("{} removed as a duplicate".format(pn))
+
     # Decide where to archive the file
-    date = GetExifDate(pn)
-    if date is None:
-        if useFileDate:
-            rootp, fn = os.path.split(pn)
-            date = GetFileDate(fn)
-    if date is not None:
-        year = date[0]
-        month = months[int(date[1])-1]
-        #dbg print("The date in {} is {}".format(fn, ymd))
-        folder = dir_archives + '\\' + year + '\\' + month
+    if ext.lower() in picture_exts:
+        date = GetExifDate(pn)
+        dir_archives = archive_pictures
     else:
+        date = GetFileDate(fn)
+        dir_archives = archive_videos
+    if date is None:
         print("No date found to archive {}".format(pn))
         return
 
+    # Archive pn using computed date
+    year = date[0]
+    month = months[int(date[1])-1]
+    #dbg print("The date in {} is {}".format(fn, ymd))
+    folder = dir_archives + '\\' + year + '\\' + month
     make_path(folder)
-    rootp, fn = os.path.split(pn)
     try:
         os.rename(pn, folder + '\\' + fn)
         archived = archived + 1
@@ -91,51 +142,61 @@ def archive(pn, useFileDate, recursive):
         return
     print("{} archived to {}".format(pn, folder))
 
-def main(pn, useFileDate, recursive):
-    global dir_archives
+def getfolder(folder, filetype):
+    """ Pick which folder to use to archive files of a particular file type """
 
-    # Archive to "%Pictures%" when it is defined
-    home = os.environ.get('Pictures')
-    if home is None:
-        # Or archive to ~/Photos
-        home = os.environ.get('USERPROFILE')
-        if home is not None:
-            home += '\\Pictures'
-    if home is not None:
-        home = os.path.expandvars(home)
-        if not os.path.exists(home):
-            home = None
+    # The returned value must be on the same drive
+    drive = folder[:2].upper()
 
-    # archiving is performed using a rename, to another place on the same drive
-    dir_archives = "\\Pictures" # the default destination for photo archives
+    # Start by looking for an environment variable with the same name
+    folder = os.environ.get(filetype)
+    if folder is not None:
+        folder = os.path.expandvars(folder)
+        if folder[:2].upper() == drive:
+            return folder
 
-    # Archive to the home folder defined above if it is on the same drive
-    # Otherwise use the program default location which has no drive letter
-    if home is not None and home[:2].lower() == pn[:2].lower():
-        dir_archives = home
+    # Next look for a folder under USERPROFILE
+    folder = os.environ.get('USERPROFILE')
+    if folder is not None:
+        folder = os.path.expandvars(folder)
+        if folder[:2].upper() == drive:
+            return folder + '\\' + filetype
 
-    # Start archiving a folder or a file
-    archive(pn, useFileDate, recursive) # a file
+    # If all else fails, use a folder based upon the root with the same name
+    return '\\' + filetype
+
+def main():
+    pass
 
 if __name__ == '__main__':
     """ Process command line arguments """
-    filespec = os.getcwd(); # <path>: use a path other than the current working directory
-    useFileDate = False     # -f: use a filename date when no exif date is available
+
+    # Read in the CRCs of every file previously backed up
+    read_crcs()
+
+    # Process the command line arguments
+    folder = os.getcwd();   # <path>: use a path other than the current working directory
     recursive = False       # -r: recursively process subfolders
+    unique_filespec = False # only matters when -r and no folder specified
     for arg in sys.argv[1:]:
         if arg[0] == '-':
-            if arg[1].lower() == 'f':
-                useFileDate = True
-            elif arg[1].lower() == 'r':
+            if arg[1].lower() == 'r':
                 recursive = True
         elif os.path.isdir(arg):
-            filespec = os.path.abspath(arg)
+            folder = os.path.abspath(arg)
+        else:
+            filespec = '\\' + arg
+            unique_filespec = True
 
-    # Convert a single filespec to a set of files
-    if os.path.isdir(filespec):
-        filespec = filespec + "\\*" # process every file in a top level folder
-    for pn in glob.glob(filespec):
-        main(pn, useFileDate, recursive)
+    # Define the alternative locations to archive pictures and movies
+    archive_pictures = getfolder(folder, 'Pictures')
+    archive_videos = getfolder(folder, 'Videos')
+
+    # Find and process files
+    for pn in glob.glob(folder + filespec):
+        archive(pn, recursive)
+    if recursive and unique_filespec:
+        archive(folder, recursive)
 
     # Print the result
     print("Found {}, archived {}, and removed {}".format(found, archived, removed))
