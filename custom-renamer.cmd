@@ -1,4 +1,5 @@
 @echo off
+SetLocal
 set tfile=%temp%\rn.cmd
 if exist %tfile% del %tfile%
 for %%f in (%*) do echo ren "%%f" "%%f" >>%tfile%

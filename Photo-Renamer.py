@@ -43,6 +43,17 @@ def rename(pn, strip, reset, recursive):
             exif_date = GetExifDate(pn)
         file_date = GetFileDate(fn)
 
+        if file_date is None:
+            file_date = GetFileDate(pn.split('\\')[-2])
+            if file_date is not None:
+                # add the date found in the path
+                newname = file_date[0] + '_' + file_date[1] + file_date[2] + '_' + fn
+                os.rename(pn, rootp + '\\' + newname)
+                renamed = renamed + 1
+                print("{} renamed {}".format(pn, newname))
+                pn = rootp + '\\' + newname
+                fn = newname
+
         # If the file has no EXIF date
         if exif_date is None:
             # but a file_date is available
