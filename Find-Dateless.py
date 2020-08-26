@@ -37,9 +37,10 @@ def main(filespec, recursive):
             Finder(pn, recursive) # CRC all files in a filespec
 
 if __name__ == '__main__':
-    """ Find-Dateless {filenames}
+    """ Find-Dateless [-r] [{filenames}]
         -r  Recursively process subfolders
     """
+    path = os.getcwd(); # <path>: use a path other than the current working directory
     recursive = False
 
     for arg in sys.argv[1:]:
@@ -47,4 +48,6 @@ if __name__ == '__main__':
             if arg[1].lower() == 'r':
                 recursive = True
         else:
-            main(os.path.abspath(arg), recursive)
+            path = os.path.abspath(arg)
+
+    main(path, recursive)
