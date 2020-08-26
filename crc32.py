@@ -35,7 +35,7 @@ def crc32pn(pn, recursive):
     else:
         # Compute the CRC for one file
         rootp, fn = os.path.split(pn)
-        print("0x{},{},{}".format(crc32(pn), fn, pn))
+        print('0x{},"{}","{}"'.format(crc32(pn), fn, pn))
 
 def main(filespec, recursive):
     """ Compute the CRC32 for a set of files and folders """
@@ -46,9 +46,10 @@ def main(filespec, recursive):
             crc32pn(pn, recursive) # CRC all files in a filespec
 
 if __name__ == '__main__':
-    """ CRC32 [-r] {filenames}
+    """ CRC32 [-r] [{pathname}]
         -r  Recursively process subfolders
     """
+    path = os.getcwd(); # <pathname>: use the current working directory by default
     recursive = False
 
     # Print a header for the CSV file style output
@@ -58,4 +59,6 @@ if __name__ == '__main__':
             if arg[1].lower() == 'r':
                 recursive = True
         else:
-            main(os.path.abspath(arg), recursive)
+            path = os.path.abspath(arg)
+
+    main(path, recursive)
