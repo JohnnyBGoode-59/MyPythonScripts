@@ -12,10 +12,15 @@
 dir_archives = "\\Pictures" # the default destination for photo archives
 archive_exts = ['.jpg', '.jpeg',  '.avi',  '.bmp',  '.mpg',  '.mp3',  '.mp4',
                 '.mov',  '.heic',  '.png',  '.3gp']
+months = [ "01Jan", "02Feb", "03Mar", "04Apr", "05May", "06Jun",
+            "07Jul", "08Aug", "09Sep", "10Oct", "11Nov", "12Dec" ]
+
 found = 0
 archived = 0
+removed = 0 # files with matching CRC are removed
 
 import glob, re, os, sys
+from crc32 import crc32
 
 from EXIF_Dating import GetExifDate, GetFileDate
 
@@ -38,20 +43,25 @@ def make_path(pn):
     os.mkdir(pn)
     return
 
-def archive(pn, useFileDate):
+def archive(pn, useFileDate, recursive):
     """ Archive one picture or movie in it's proper place """
-    global dir_archives, found, archived, archive_exts
+    global dir_archives, archive_exts, months, found, archived, removed
+
+    # Optionally process folders recursively
+    if os.path.isdir(pn):
+        if recursive:
+            for fn in glob.glob(pn + "\\*"):
+                archive(fn, useFileDate, recursive)
+        return
 
     # only archive some types of files
-    found = found + 1
     path, ext = os.path.splitext(pn)
     if ext.lower() not in archive_exts:
         print("Not archiving {}".format(pn))
         return
+    found = found + 1
 
     # Decide where to archive the file
-    months = [ "01Jan", "02Feb", "03Mar", "04Apr", "05May", "06Jun",
-               "07Jul", "08Aug", "09Sep", "10Oct", "11Nov", "12Dec" ]
     date = GetExifDate(pn)
     if date is None:
         if useFileDate:
@@ -72,50 +82,60 @@ def archive(pn, useFileDate):
         os.rename(pn, folder + '\\' + fn)
         archived = archived + 1
     except:
-        print("{} could not be archived to {}".format(pn, folder))
+        if crc32(pn) == crc32(folder + '\\' + fn):
+            os.remove(pn)
+            removed += 1
+            print("{} removed as a duplicate".format(pn))
+        else:
+            print("{} could not be archived to {}".format(pn, folder))
         return
     print("{} archived to {}".format(pn, folder))
 
-def archive_everything(pn, useFileDate):
-    """ find everything and archive all pictures and movies """
-    if(os.path.isdir(pn)):
-        for fn in glob.glob(pn + "\\*"):
-            if(not os.path.isdir(fn)):
-                archive(fn, useFileDate)
-    else:
-        print("{} is not a folder".format(pn))
+def main(pn, useFileDate, recursive):
+    global dir_archives
 
-def main(pn, useFileDate):
-    global dir_archives, found, archived
-
-    # Archive to "%Photos%" when it is defined
-    home = os.environ.get('Photos')
+    # Archive to "%Pictures%" when it is defined
+    home = os.environ.get('Pictures')
     if home is None:
         # Or archive to ~/Photos
         home = os.environ.get('USERPROFILE')
         if home is not None:
-            home = home + '\\Pictures'
-            if not os.path.exists(home):
-                home = None
+            home += '\\Pictures'
+    if home is not None:
+        home = os.path.expandvars(home)
+        if not os.path.exists(home):
+            home = None
+
+    # archiving is performed using a rename, to another place on the same drive
+    dir_archives = "\\Pictures" # the default destination for photo archives
 
     # Archive to the home folder defined above if it is on the same drive
     # Otherwise use the program default location which has no drive letter
     if home is not None and home[:2].lower() == pn[:2].lower():
         dir_archives = home
 
-    # Start archiving
-    archive_everything(pn, useFileDate)
-    print("Found {} and archived {}".format(found, archived))
+    # Start archiving a folder or a file
+    archive(pn, useFileDate, recursive) # a file
 
 if __name__ == '__main__':
     """ Process command line arguments """
-    path = os.getcwd(); # <path>: use a path other than the current working directory
-    useFileDate = False # -f: use a filename date when no exif date is available
+    filespec = os.getcwd(); # <path>: use a path other than the current working directory
+    useFileDate = False     # -f: use a filename date when no exif date is available
+    recursive = False       # -r: recursively process subfolders
     for arg in sys.argv[1:]:
         if arg[0] == '-':
             if arg[1].lower() == 'f':
                 useFileDate = True
+            elif arg[1].lower() == 'r':
+                recursive = True
         elif os.path.isdir(arg):
-            path = os.path.abspath(arg)
+            filespec = os.path.abspath(arg)
 
-    main(path, useFileDate)
+    # Convert a single filespec to a set of files
+    if os.path.isdir(filespec):
+        filespec = filespec + "\\*" # process every file in a top level folder
+    for pn in glob.glob(filespec):
+        main(pn, useFileDate, recursive)
+
+    # Print the result
+    print("Found {}, archived {}, and removed {}".format(found, archived, removed))
