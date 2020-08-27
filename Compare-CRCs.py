@@ -15,7 +15,7 @@ duplicates = 0
 removed = 0
 deleted = 0
 
-def main(crcfile):
+def main(crcfile, auto_delete):
     global duplicates, removed, deleted
 
     # Read the CRC file to create a dictionary
@@ -48,6 +48,19 @@ def main(crcfile):
 
             # Select duplicates to delete
             while len(crcs[crc]) > 1:
+                # auto delete duplicates as requested
+                if auto_delete != "":
+                    try:
+                        # Remove one file
+                        pn = crcs[crc][int(auto_delete)]
+                        os.remove(pn)
+                        print("{} deleted".format(pn))
+                        deleted += 1
+                    except:
+                        removed += 1
+                    crcs[crc].remove(pn)
+                continue
+
                 # Display the list
                 for i in range(len(crcs[crc])):
                     print('{}: {}'.format(i, crcs[crc][i]))
@@ -78,15 +91,18 @@ if __name__ == '__main__':
             # Or /Pictures/crc.txt
             filespec = '\\Pictures'
     filespec = os.path.expandvars(filespec+"\\crc.txt")
+    auto_delete = ""
 
     # Parse the command line for a specific pathname
     for arg in sys.argv[1:]:
         if arg[0] == '-':
-            pass
+            if arg[1] == 'a':
+                if arg[2] in "01":
+                    auto_delete = arg[2]
         elif os.path.isfile(arg):
             filespec = os.path.abspath(arg)
 
-    main(filespec)
+    main(filespec, auto_delete)
     print("{} duplicate CRC's found".format(duplicates))
     print("{} were previously deleted".format(removed))
-    print("{} were just deleted".format(deleted))
+    print("{} were just now deleted".format(deleted))
