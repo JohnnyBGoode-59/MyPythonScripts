@@ -38,31 +38,25 @@ def rename(pn, strip, reset, recursive):
     if not strip:
         # Try to get both EXIF date and File date
         if reset:
-            exif_date = None
+            exif_date = None # ignore a bad EXIF date
         else:
             exif_date = GetExifDate(pn)
-        file_date = GetFileDate(fn)
 
+        # Get a file date either from the filename of the parent folder name
+        file_date = true_file_date = GetFileDate(fn)
         if file_date is None:
             file_date = GetFileDate(pn.split('\\')[-2])
-            if file_date is not None:
-                # add the date found in the path
-                newname = file_date[0] + '_' + file_date[1] + file_date[2] + '_' + fn
-                os.rename(pn, rootp + '\\' + newname)
-                renamed = renamed + 1
-                print("{} renamed {}".format(pn, newname))
-                pn = rootp + '\\' + newname
-                fn = newname
 
         # If the file has no EXIF date
         if exif_date is None:
-            # but a file_date is available
+            # and a file date is not available either
             if file_date is None:
                 undated = undated + 1
                 print("{} has no date".format(pn))
                 return
 
-            # set the EXIF date
+            # but a file date is available
+            # so set the EXIF date using the file date
             try:
                 SetExifDate(pn, file_date)
                 exif_date = GetExifDate(pn)
@@ -73,17 +67,23 @@ def rename(pn, strip, reset, recursive):
                     undated = undated + 1
                     print("Date cannont be added to {}".format(pn))
             except:
+                exif_date = None
                 undated = undated + 1
                 print("{} cannot be updated".format(pn))
-            return
 
-        else:
-            # If the two dates match, do nothing
-            if file_date is not None:
-                # Just compare dates, not times
-                if (exif_date[:3] == file_date[:3]):
-                    print("{} is well named".format(pn))
-                    return
+        # If the two dates match, do nothing
+        if file_date is not None and exif_date is not None:
+            # Just compare dates, not times
+            if (exif_date[:3] == file_date[:3]):
+                print("{} is well named".format(pn))
+                return
+
+        # Use the folder date if no exif date is available
+        if exif_date is None:
+            if true_file_date is None:
+                exif_date = file_date # i.e. rename the file using the folder name
+            else:
+                exif_date = true_file_date # or just use the file date
 
         # Define the new prefix for the filename
         prefix = exif_date[0]+'_'+exif_date[1]+exif_date[2]+'_'
