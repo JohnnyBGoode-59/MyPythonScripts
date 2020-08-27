@@ -14,6 +14,7 @@ found = 0
 renamed = 0
 dated = 0
 undated = 0
+filespec = '*'
 
 import glob, re, os, sys
 
@@ -21,19 +22,25 @@ from EXIF_Dating import GetExifDate, SetExifDate, GetFileDate
 
 def rename(pn, strip, reset, recursive):
     """ Rename one file """
-    global found, renamed, dated, undated
-    found = found + 1
+    global found, renamed, dated, undated, filespec
 
     # Optionally process folders recursively
     if os.path.isdir(pn):
+        for fn in glob.glob(pn + '\\' + filespec):
+            if os.path.isfile(fn):
+                rename(fn, strip, reset, recursive)
+
+        # Perform recursion with a unique filespec
         if recursive:
             for fn in glob.glob(pn + "\\*"):
-                rename(fn, strip, reset, recursive)
+                if os.path.isdir(fn):
+                    rename(fn, strip, reset, recursive)
         return
 
     # Define filename pattern matching first
     sep = "[\-\._~ ]*?" # optional separators: the dash has to be escaped
     rootp, fn = os.path.split(pn)
+    found = found + 1
 
     if not strip:
         # Try to get both EXIF date and File date
@@ -147,13 +154,16 @@ def rename(pn, strip, reset, recursive):
     if i > 9:
         print("{} cannot be renamed {}".format(pn, newname))
 
-def main(filespec, strip, reset, recursive):
+def main(pn, strip, reset, recursive):
     """ find everything and rename anything with date information available """
-    global found, dated, renamed, undated
+    global found, dated, renamed, undated, filespec
 
-    if os.path.isdir(filespec):
-        filespec = filespec + "\\*" # process every file in a top level folder
-    for pn in glob.glob(filespec):
+    if os.path.isdir(pn):
+        pn = pn + '\\' + filespec
+    else:
+        pn, filespec = os.path.split(pn) # record the filespec
+
+    for fn in glob.glob(pn):
         rename(pn, strip, reset, recursive) # rename all files in a filespec
 
     print("Found {}, renamed {}, added dates to {}, failed to date {}".format(found, renamed, dated, undated))
