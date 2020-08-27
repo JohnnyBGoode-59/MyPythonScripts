@@ -23,25 +23,18 @@ crcs = {}       # a dictionary of previously backed up files
 found = 0       # Count files found
 archived = 0    # Count files archived
 removed = 0     # Count files removed due to matching CRC
-filespec = "\\*"# which files get archived?
+filespec = "*"  # which files get archived?
 
 import glob, re, os, sys
 from crc32 import crc32
 
 from EXIF_Dating import GetExifDate, GetFileDate
 
-def read_crcs():
+def read_crcs(pn):
     global crcs
 
-    # Read %Pictures%/crc.txt when it is present
-    pn = os.environ.get('Pictures')
-    if pn is None:
-        # Or ~/Photos/Pictures/crc.txt
-        pn = os.environ.get('USERPROFILE')
-        if pn  is None:
-            # Or /Pictures/crc.txt
-            filespec = '\\Pictures'
-    pn = os.path.expandvars(pn+"\\crc.txt")
+    # Read crcs.csv in the specified folder when it is present
+    pn = os.path.expandvars(pn+"\\crcs.csv")
 
     # Read the CRC file to create a dictionary
     if not os.path.isfile(pn):
@@ -87,10 +80,11 @@ def archive(pn, recursive):
 
     # Optionally process folders recursively
     if os.path.isdir(pn):
+        for fn in glob.glob(pn + '\\' + filespec):
+            if os.path.isfile(fn):
+                archive(fn, recursive)
+
         if recursive:
-            for fn in glob.glob(pn + filespec):
-                if os.path.isfile(fn):
-                    archive(fn, recursive)
             for fn in glob.glob(pn + '\\*'):
                 if os.path.isdir(fn):
                     archive(fn, recursive)
@@ -171,9 +165,6 @@ def main():
 if __name__ == '__main__':
     """ Process command line arguments """
 
-    # Read in the CRCs of every file previously backed up
-    read_crcs()
-
     # Process the command line arguments
     folder = os.getcwd();   # <path>: use a path other than the current working directory
     recursive = False       # -r: recursively process subfolders
@@ -185,18 +176,17 @@ if __name__ == '__main__':
         elif os.path.isdir(arg):
             folder = os.path.abspath(arg)
         else:
-            filespec = '\\' + arg
-            unique_filespec = True
+            folder, filespec = os.path.split(arg)
 
     # Define the alternative locations to archive pictures and movies
     archive_pictures = getfolder(folder, 'Pictures')
     archive_videos = getfolder(folder, 'Videos')
 
+    # Read in the CRCs of every file previously backed up
+    read_crcs(archive_pictures)
+
     # Find and process files
-    for pn in glob.glob(folder + filespec):
-        archive(pn, recursive)
-    if recursive and unique_filespec:
-        archive(folder, recursive)
+    archive(pn, recursive)
 
     # Print the result
     print("Found {}, archived {}, and removed {}".format(found, archived, removed))

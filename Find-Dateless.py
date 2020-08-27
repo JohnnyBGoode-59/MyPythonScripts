@@ -13,14 +13,23 @@ import glob, os, sys
 
 from EXIF_Dating import GetExifDate
 
+filespec = '*'
+
 def Finder(pn, recursive):
     """ Check a file or folder for files with no date """
+    global filespec
+
     if os.path.isdir(pn):
-        # One folder deep is ok
-        for fn in glob.glob(pn + "\\*"):
-            # But recursion requires -r
-            if not os.path.isdir(fn) or recursive:
+        # find files
+        for fn in glob.glob(pn + '\\' + filespec):
+            if os.path.isfile(fn):
                 Finder(fn, recursive)
+
+        # perform recursion
+        if recursive:
+            for fn in glob.glob(pn + "\\*"):
+                if os.path.isdir(fn):
+                    Finder(fn, recursive)
     else:
         # Each file is processed here
         path, ext = os.path.splitext(pn)
@@ -28,13 +37,15 @@ def Finder(pn, recursive):
             if GetExifDate(pn) is None:
                 print("{}".format(pn))
 
-def main(filespec, recursive):
+def main(pn, recursive):
     """ Find files with no date in a set of files and folders """
-    if os.path.isdir(filespec):
-        Finder(filespec, recursive) # CRC all files in a folder
+    global filespec
+
+    if os.path.isdir(pn):
+        Finder(pn, recursive) # CRC all files in a folder
     else:
-        for pn in glob.glob(filespec):
-            Finder(pn, recursive) # CRC all files in a filespec
+        pn, filespec = os.path.split(pn)
+        Finder(pn, recursive) # use a modified filespec
 
 if __name__ == '__main__':
     """ Find-Dateless [-r] [{filenames}]

@@ -85,12 +85,12 @@ if __name__ == '__main__':
     # Read %Pictures%/crc.txt when it is present
     filespec = os.environ.get('Pictures')
     if filespec is None:
-        # Or ~/Photos/Pictures/crc.txt
+        # Or ~/Photos/Pictures/crcs.csv
         filespec = os.environ.get('USERPROFILE')
         if filespec is None:
-            # Or /Pictures/crc.txt
+            # Or /Pictures/crcs.csv
             filespec = '\\Pictures'
-    filespec = os.path.expandvars(filespec+"\\crc.txt")
+    filespec = os.path.expandvars(filespec+"\\crcs.csv")
     auto_delete = ""
 
     # Parse the command line for a specific pathname
