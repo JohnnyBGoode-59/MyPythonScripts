@@ -11,6 +11,8 @@
 
 import glob, os, sys, zlib
 
+filespec = '*'  # By default all files are processed
+
 def crc32(pn):
     """ Compute the CRC32 for a single file.
         Returns a hexadecimal string.
@@ -26,24 +28,32 @@ def crc32(pn):
 
 def crc32pn(pn, recursive):
     """ Compute the CRC for one file or all files in one folder """
+    global filespec
+
     if os.path.isdir(pn):
-        for fn in glob.glob(pn + "\\*"):
-            # Compute the CRC for each file in a folder
-            # or each file in a subfolder if -r is specified
-            if not os.path.isdir(fn) or recursive:
-                crc32pn(fn, recursive)
+        # Use filespec to find files and folders within a folder
+        for fn in glob.glob(pn + '\\' + filespec):
+            if os.path.isfile(fn):
+                crc32pn(fn, recursive)  # process files
+
+        # Perform recursion
+        if recursive:
+            for fn in glob.glob(pn + "\\*"):
+                if os.path.isdir(fn):
+                    crc32pn(fn, recursive)
     else:
         # Compute the CRC for one file
         rootp, fn = os.path.split(pn)
         print('0x{},"{}","{}"'.format(crc32(pn), fn, pn))
 
-def main(filespec, recursive):
+def main(pn, recursive):
     """ Compute the CRC32 for a set of files and folders """
-    if os.path.isdir(filespec):
-        crc32pn(filespec, recursive) # CRC all files in a folder
+    if os.path.isdir(pn) or os.path.isfile(pn):
+        crc32pn(pn, recursive) # CRC all files in a folder
     else:
-        for pn in glob.glob(filespec):
-            crc32pn(pn, recursive) # CRC all files in a filespec
+        global filespec
+        pn, filespec = os.path.split(pn)
+        crc32pn(pn, recursive) # use a modified filespec
 
 if __name__ == '__main__':
     """ CRC32 [-r] [{pathname}]
