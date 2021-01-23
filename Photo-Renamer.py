@@ -154,23 +154,12 @@ def rename(pn, strip, reset, recursive):
     if i > 9:
         print("{} cannot be renamed {}".format(pn, newname))
 
-def main(pn, strip, reset, recursive):
-    """ find everything and rename anything with date information available """
-    global found, dated, renamed, undated, filespec
-
-    if os.path.isdir(pn):
-        pn = pn + '\\' + filespec
-    else:
-        pn, filespec = os.path.split(pn) # record the filespec
-
-    for fn in glob.glob(pn):
-        rename(pn, strip, reset, recursive) # rename all files in a filespec
-
-    print("Found {}, renamed {}, added dates to {}, failed to date {}".format(found, renamed, dated, undated))
+def main():
+    pass
 
 if __name__ == '__main__':
     """ Process command line arguments """
-    filespec = os.getcwd(); # <path>: use a path other than the current working directory
+    pn = os.getcwd();   # <path>: use a path other than the current working directory
     strip = False       # -s: simply strip any date in the current filenames
     reset = False       # -d: reset the date based upon the current filenames
     recursive = False   # -r: recursively process subfolders
@@ -184,10 +173,13 @@ if __name__ == '__main__':
             elif arg[1].lower() == 'r':
                 recursive = True
         else:
-            filespec = os.path.abspath(arg)
+            pn = os.path.abspath(arg)
+            if not os.path.isdir(pn):
+                pn, filespec = os.path.split(pn)
 
     # -d is ignored if -s is also supplied
     if strip:
         reset = False
 
-    main(filespec, strip, reset, recursive)
+    rename(pn, strip, reset, recursive) # rename all files in a filespec
+    print("Found {}, renamed {}, added dates to {}, failed to date {}".format(found, renamed, dated, undated))
