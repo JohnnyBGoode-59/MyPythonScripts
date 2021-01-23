@@ -122,6 +122,16 @@ def GetFileDate(fn):
                 today[i] = m.group(i+1)
         return today[:3]
 
+    # mmddyyhhmm[a-f].
+    mm = dd = yy = hr = min = "([0-9][0-9])"
+    m = re.search("^"+mm+dd+yy+hr+min+"[a-f]*\.", fn)
+    if m is not None:
+        today[0] = "20"+m.group(3)
+        today[1] = m.group(1)
+        today[2] = m.group(2)
+        today[3] = m.group(4)
+        today[4] = m.group(5)
+        return today
     return None
 
 def main():
