@@ -59,7 +59,7 @@ def main(crcfile, auto_delete):
                     except:
                         removed += 1
                     crcs[crc].remove(pn)
-                continue
+                    continue
 
                 # Display the list
                 for i in range(len(crcs[crc])):

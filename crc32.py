@@ -59,8 +59,8 @@ if __name__ == '__main__':
     """ CRC32 [-r] [{pathname}]
         -r  Recursively process subfolders
     """
-    path = os.getcwd(); # <pathname>: use the current working directory by default
     recursive = False
+    count = 0
 
     # Print a header for the CSV file style output
     print("CRC,Filename,Pathname")
@@ -69,6 +69,8 @@ if __name__ == '__main__':
             if arg[1].lower() == 'r':
                 recursive = True
         else:
-            path = os.path.abspath(arg)
+            main(os.path.abspath(arg), recursive)
+            count += 1
 
-    main(path, recursive)
+    if count == 0:
+        main(os.getcwd(), recursive)
