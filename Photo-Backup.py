@@ -22,6 +22,7 @@ crcs = {}       # a dictionary of previously backed up files
 
 found = 0       # Count files found
 archived = 0    # Count files archived
+not_archived = 0 # Count files that could not be archived
 removed = 0     # Count files removed due to matching CRC
 filespec = "*"  # which files get archived?
 
@@ -76,7 +77,7 @@ def archive(pn, recursive):
     """ Archive one picture or movie in it's proper place """
     global archive_pictures, picture_exts
     global archive_videos, movie_exts
-    global months, found, archived, removed, crcs
+    global months, found, archived, not_archived, removed, crcs
 
     # Optionally process folders recursively
     if os.path.isdir(pn):
@@ -133,6 +134,7 @@ def archive(pn, recursive):
             print("{} removed as a duplicate".format(pn))
         else:
             print("{} could not be archived to {}".format(pn, folder))
+            not_archived = not_archived + 1
         return
     print("{} archived to {}".format(pn, folder))
 
@@ -186,7 +188,7 @@ if __name__ == '__main__':
     read_crcs(archive_pictures)
 
     # Find and process files
-    archive(pn, recursive)
+    archive(folder, recursive)
 
     # Print the result
-    print("Found {}, archived {}, and removed {}".format(found, archived, removed))
+    print("Found {}, archived {}, removed {}, {} could not be archived".format(found, archived, removed, not_archived))
