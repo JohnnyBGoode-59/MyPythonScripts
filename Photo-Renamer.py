@@ -14,6 +14,7 @@ found = 0
 renamed = 0
 dated = 0
 undated = 0
+well_named = 0
 filespec = '*'
 
 import glob, re, os, sys
@@ -22,7 +23,7 @@ from EXIF_Dating import GetExifDate, SetExifDate, GetFileDate
 
 def rename(pn, strip, reset, recursive):
     """ Rename one file """
-    global found, renamed, dated, undated, filespec
+    global found, renamed, dated, undated, well_named, filespec
 
     # Optionally process folders recursively
     if os.path.isdir(pn):
@@ -82,7 +83,8 @@ def rename(pn, strip, reset, recursive):
         if file_date is not None and exif_date is not None:
             # Just compare dates, not times
             if (exif_date[:3] == file_date[:3]):
-                print("{} is well named".format(pn))
+                # print("{} is well named".format(pn))
+                well_named = well_named + 1
                 return
 
         # Use the folder date if no exif date is available
@@ -182,4 +184,4 @@ if __name__ == '__main__':
         reset = False
 
     rename(pn, strip, reset, recursive) # rename all files in a filespec
-    print("Found {}, renamed {}, added dates to {}, failed to date {}".format(found, renamed, dated, undated))
+    print("Found {}, well named {}, renamed {}, added dates to {}, failed to date {}".format(found, well_named, renamed, dated, undated))
