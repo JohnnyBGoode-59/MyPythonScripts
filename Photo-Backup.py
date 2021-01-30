@@ -29,7 +29,7 @@ filespec = "*"  # which files get archived?
 import glob, re, os, sys
 from crc32 import crc32
 
-from EXIF_Dating import GetExifDate, GetFileDate
+from EXIF_Dating import GetExifDate, GetFileDate, GetExifDimensions
 
 def read_crcs(pn):
     global crcs
@@ -125,14 +125,44 @@ def archive(pn, recursive):
     folder = dir_archives + '\\' + year + '\\' + month
     make_path(folder)
     try:
-        os.rename(pn, folder + '\\' + fn)
+        backup_pn = folder + '\\' + fn
+        os.rename(pn, backup_pn)
         archived = archived + 1
     except:
-        if crc32(pn) == crc32(folder + '\\' + fn):
+        if crc32(pn) == crc32(backup_pn):
             os.remove(pn)
             removed += 1
             print("{} removed as a duplicate".format(pn))
         else:
+            # Rename failed and the CRC32 is not the same for the two files
+
+            # Replace the backup files with higher resolution files
+            replace = False
+            src_dim = GetExifDimensions(pn)
+            src_date = GetExifDate(pn)
+            dest_dim = GetExifDimensions(backup_pn)
+            dest_date = GetExifDate(backup_pn)
+            update = False
+            if src_dim is not None:
+                if dest_dim is not None:
+                    if dest_dim[0] < src_dim[0] or dest_dim[1] < src_dim[1]:
+                        update = True   # Improve resolution
+                    else:
+                        os.remove(pn)
+                        removed += 1
+                        print("{} removed as lower resolution".format(pn))
+                        return
+            if src_date is None:
+                if dest_date is not None:
+                    update = True   # Add a date
+
+            if update:
+                os.remove(backup_pn)
+                os.rename(pn, backup_pn)
+                archived = archived + 1
+                print("{} replaced archive in {}".format(pn, folder))
+                return
+
             print("{} could not be archived to {}".format(pn, folder))
             not_archived = not_archived + 1
         return
