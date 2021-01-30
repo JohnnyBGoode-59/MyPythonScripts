@@ -9,7 +9,7 @@
 # Licence:     GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
 #-------------------------------------------------------------------------------
 
-import re, os
+import glob, re, os, sys
 from PIL import Image
 from PIL.ExifTags import TAGS
 import piexif
@@ -41,6 +41,20 @@ def get_exif(fn):
         #dbg print("{} has no EXIF data".format(fn))
         pass
     return ret
+
+def GetExifDimensions(pn):
+    """ Get the dimensions from a picture using EXIF data """
+    exif = get_exif(pn)
+    # print(exif)
+    width = exif.get('ExifImageWidth')
+    if width is None:
+        width = exif.get('ImageWidth')
+    height = exif.get('ExifImageHeight')
+    if height is None:
+        height= exif.get('ImageLength')
+    if width is None or height is None:
+        return None
+    return width, height
 
 def GetExifDate(pn):
     """ Get a date from a picture using EXIF data """
@@ -122,9 +136,9 @@ def GetFileDate(fn):
                 today[i] = m.group(i+1)
         return today[:3]
 
-    # mmddyyhhmm[a-f].
+    # mmddyyhhmm[a-f]*.
     mm = dd = yy = hr = min = "([0-9][0-9])"
-    m = re.search("^"+mm+dd+yy+hr+min+"[a-f]*\.", fn)
+    m = re.search("^"+mm+dd+yy+hr+min+"[a-f]*([-~(][0-9]*[)]*)*\.", fn)
     if m is not None:
         today[0] = "20"+m.group(3)
         today[1] = m.group(1)
@@ -132,10 +146,23 @@ def GetFileDate(fn):
         today[3] = m.group(4)
         today[4] = m.group(5)
         return today
+
     return None
 
 def main():
     GetFileDate('195907252004')
 
 if __name__ == '__main__':
+    for arg in sys.argv[1:]:
+        if os.path.isdir(arg):
+            for pn in glob.glob(arg + '\\*.*'):
+                if os.path.isfile(pn):
+                    dim = GetExifDimensions(pn)
+                    if dim is not None:
+                        print("Dimensions of {} is {}".format(pn, dim))
+                    rootp, fn = os.path.split(pn)
+                    date = GetFileDate(fn)
+                    if date is not None:
+                        print("Date of {} is {}".format(pn, date))
+
     main()
