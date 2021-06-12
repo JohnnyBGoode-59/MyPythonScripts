@@ -16,14 +16,16 @@ dated = 0
 undated = 0
 well_named = 0
 filespec = '*'
+use_modified_date = False   # -m: reset the date based upon the file date
 
-import glob, re, os, sys
+import glob, re, os, sys, time
 
 from EXIF_Dating import GetExifDate, SetExifDate, GetFileDate
 
 def rename(pn, strip, reset, recursive):
     """ Rename one file """
     global found, renamed, dated, undated, well_named, filespec
+    global use_modified_date
 
     # Optionally process folders recursively
     if os.path.isdir(pn):
@@ -40,7 +42,12 @@ def rename(pn, strip, reset, recursive):
 
     # Define filename pattern matching first
     sep = "[\-\._~ ]*?" # optional separators: the dash has to be escaped
+    rootp, ext = os.path.splitext(pn)
     rootp, fn = os.path.split(pn)
+
+    # Avoid processing thumb.db files
+    if ext.lower() == ".db":
+        return
     found = found + 1
 
     if not strip:
@@ -50,7 +57,7 @@ def rename(pn, strip, reset, recursive):
         else:
             exif_date = GetExifDate(pn)
 
-        # Get a file date either from the filename of the parent folder name
+        # Get a file date either from the filename or the parent folder name
         file_date = true_file_date = GetFileDate(fn)
         if file_date is None:
             file_date = GetFileDate(pn.split('\\')[-2])
@@ -59,38 +66,49 @@ def rename(pn, strip, reset, recursive):
         if exif_date is None:
             # and a file date is not available either
             if file_date is None:
-                undated = undated + 1
-                print("{} has no date".format(pn))
-                return
+                # Use the file modification date when requested to do so
+                if use_modified_date:
+                    modt = os.path.getmtime(pn) # create time epoch for date
+                    mts = time.localtime(modt)
+                    file_date = [ str(mts.tm_year),
+                                ("0"+str(mts.tm_mon))[-2:],
+                                ("0"+str(mts.tm_mday))[-2:],
+                                ("0"+str(mts.tm_hour))[-2:],
+                                ("0"+str(mts.tm_min))[-2:],
+                                ("0"+str(mts.tm_sec))[-2:] ]
+                else:
+                    undated = undated + 1
+                    print("{} has no date".format(pn))
+                    return
 
             # but a file date is available
             # so set the EXIF date using the file date
             try:
                 SetExifDate(pn, file_date)
-                exif_date = GetExifDate(pn)
-                if exif_date is not None:
+                check_date = GetExifDate(pn)
+                if check_date is not None:
                     print("Added date to {}".format(pn))
                     dated = dated + 1
                 else:
                     undated = undated + 1
-                    print("Date cannont be added to {}".format(pn))
+                    print("Date cannot be added to {}".format(pn))
             except:
                 exif_date = None
                 undated = undated + 1
                 print("{} cannot be updated".format(pn))
 
         # If the two dates match, do nothing
-        if file_date is not None and exif_date is not None:
+        if true_file_date is not None and exif_date is not None:
             # Just compare dates, not times
-            if (exif_date[:3] == file_date[:3]):
+            if (exif_date[:3] == true_file_date[:3]):
                 # print("{} is well named".format(pn))
                 well_named = well_named + 1
                 return
 
-        # Use the folder date if no exif date is available
+        # Use the file date if no exif date is available
         if exif_date is None:
             if true_file_date is None:
-                exif_date = file_date # i.e. rename the file using the folder name
+                exif_date = file_date # i.e. rename the file using the file name
             else:
                 exif_date = true_file_date # or just use the file date
 
@@ -163,17 +181,26 @@ if __name__ == '__main__':
     """ Process command line arguments """
     pn = os.getcwd();   # <path>: use a path other than the current working directory
     strip = False       # -s: simply strip any date in the current filenames
-    reset = False       # -d: reset the date based upon the current filenames
+    reset = False       # -f: ignore the EXIF date and use the filename date instead
     recursive = False   # -r: recursively process subfolders
+    use_modified_date = False   # -m: reset the date based upon the file date
 
     for arg in sys.argv[1:]:
         if arg[0] == '-':
             if arg[1].lower() == 's':
                 strip = True
-            elif arg[1].lower() == 'd':
+            elif arg[1].lower() == 'f':
                 reset = True
             elif arg[1].lower() == 'r':
                 recursive = True
+            elif arg[1].lower() == 'm':
+                use_modified_date = True
+            else:
+                print(  "-s Strip filename and EXIF date information\n"
+                        "-f use the Filename to reset the EXIF date\n"
+                        "-r Recursively search folders\n"
+                        "-m use the file Modification date to reset the EXIF date")
+                exit()
         else:
             pn = os.path.abspath(arg)
             if not os.path.isdir(pn):
