@@ -73,6 +73,9 @@ def GetExifDate(pn):
         m = re.search(yr+mon+day+hr+minute+sec, ret)
         if m is not None:
             return [ ret[0:4], ret[5:7], ret[8:10], ret[11:13], ret[8:10], ret[11:13] ]
+        m = re.search(yr+mon+day, ret)
+        if m is not None:
+            return [ ret[0:4], ret[5:7], ret[8:10] ]
         return None
     return ret
 
