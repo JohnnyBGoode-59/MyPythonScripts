@@ -248,13 +248,13 @@ if __name__ == '__main__':
     stocks = {}
     for arg in sys.argv[1:]:
         # Skip any ticker that has no data
-        print("{}:".format(arg))
-        data = GetData(arg)
+        print("{}:".format(arg.upper()))
+        data = GetData(arg.upper())
         if data == None:
             print("not found")
         else:
             # Create a new ticker and a worksheet for that ticker
-            stocks[arg] = data
+            stocks[arg.upper()] = data
             print()
 
     # If nothing was found, don't create a workbook
