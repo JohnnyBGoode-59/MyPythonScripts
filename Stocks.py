@@ -284,25 +284,42 @@ if __name__ == '__main__':
     for ticker in stocks:
 
         # Add summary data items
-        row = len(wb.worksheets) + 1
+        row = len(wb.worksheets)*2
         col = 1
         for field in summary_fields:
             data = stocks[ticker]
             if field in data:
                 if not isinstance(data[field], dict):
-                    # Add summary data items
+                    # Add percentage format to any field with '%' in the heading
                     if '%' in field:
                         percent = '%'
                     else:
                         percent = ''
+
+                    # Add the summary data itself
                     summary.cell(row, col, data[field]).number_format = fmt_cell(data[field], percent)
+
             col += 1
+
+        # Add a line of math
+        price = '$E'+str(row)
+        row += 1
+        alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        for col in range(6, 10): # e.g. '=$E2/F2-1' as a percentage
+            summary.cell(row, col, '='+price+'/'+alphabet[col-1]+str(row-1)+'-1')
+            summary.cell(row, col).number_format = '+0.0%;[RED]-0.0%'
+        for col in range(12, 13): # e.g. '=L2/K2-1' as a percentage
+            summary.cell(row, col, '='+alphabet[col-1]+str(row-1)+'/'+alphabet[col-2]+str(row-1)+'-1')
+            summary.cell(row, col).number_format = '+0.0%;[RED]-0.0%'
+        for col in range(21, 22): # e.g. '=U2/T2' as a percentage
+            summary.cell(row, col, '='+alphabet[col-1]+str(row-1)+'/'+alphabet[col-2]+str(row-1))
+            summary.cell(row, col).number_format = '+0.0%;[RED]-0.0%'
 
         # Create a new worksheet for each ticker
         sheet = wb.create_sheet(ticker)
 
         # Widen each column of stock specific sheets
-        for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+        for letter in alphabet:
             sheet.column_dimensions[letter].width = 10.0
 
         # Add worksheet data items, starting with EPS
