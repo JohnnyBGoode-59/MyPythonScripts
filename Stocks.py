@@ -5,7 +5,7 @@
 # Author:      John Eichenberger
 #
 # Created:     11/06/2021
-# Copyright:   (c) John Eichenberger 2020
+# Copyright:   (c) John Eichenberger 2021
 # Licence:     GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
 #-------------------------------------------------------------------------------
 
