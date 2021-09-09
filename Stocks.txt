@@ -1,0 +1,30 @@
+My notes for Stocks.py:
+
+Command line syntax: Stocks [ticker(s)]
+
+Ideas for improvements:
+*	Find a way to create an Excel fuelgage style cell to show the current stock price
+	as it compares with the 52 week highs and lows.
+* 	Create one or more graphs from historical data that is captured.
+*	Automate alerts that are listed for each ticker within the sheet for that ticker.
+	The idea is to simplify drawing attention to the positive and negative data
+	for any given ticker.
+*	Use a dictionary for the data collected, making it easier to modify content without
+	a lot of programming changes.
+
+Alerts:
+*	Price trending alerts as compared with 50 and 200 day average
+*	Price trending alerts as compared with 52 week highs and lows
+*	10 day volume is much more than average, a signal of a recent spike in interest
+*	Negative PE
+*	Very high PE
+*	PE trending: up? down?
+* 	Negative EPS
+* 	EPS trending: up? down?
+*	Poor EPS predictions
+*	Excessive Price/Book value
+*	Excessive Short interest
+*	Negative growth
+*	Peculiar values such as institutions holding more than 100% of a stock? MRSN
+*	No cash flow issues
+*	Lack of financials

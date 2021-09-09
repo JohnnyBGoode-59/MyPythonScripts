@@ -79,164 +79,173 @@ def GetData(ticker):
     # Pull select data from get_summary_data()
 	# Each field could be zero or None.
     data = stock.get_summary_data()[ticker]
-    fields = {}
-    fields['50 Day'] = 'fiftyDayAverage'                # F1
-    fields['200 Day'] = 'twoHundredDayAverage'		    # G1
-    fields['52wk High'] = 'fiftyTwoWeekHigh'			# H1
-    fields['52wk Low'] = 'fiftyTwoWeekLow'				# I1
-    fields['CAP'] = 'marketCap'                         # J1
-    fields['Volume'] = 'averageVolume'		           	# K1
-    fields['10 Day'] = 'averageVolume10days'		    # L1
-    fields['PE ->'] = 'forwardPE'                       # M1
-    fields['PE <-'] = 'trailingPE'				        # N1
-    for fld in fields:
-        if not fld in summary_fields:
-            summary_fields += [fld]
-        if fields[fld] in data:
-            val = data[fields[fld]]
-            if val == 0:
-                val = None  # Make zeros disappear
-            rd[fld] = val
-            print("{} = {}".format(fld, val))
+    if data is not None:
+        fields = {}
+        fields['50 Day'] = 'fiftyDayAverage'                # F1
+        fields['200 Day'] = 'twoHundredDayAverage'		    # G1
+        fields['52wk High'] = 'fiftyTwoWeekHigh'			# H1
+        fields['52wk Low'] = 'fiftyTwoWeekLow'				# I1
+        fields['CAP'] = 'marketCap'                         # J1
+        fields['Volume'] = 'averageVolume'		           	# K1
+        fields['10 Day'] = 'averageVolume10days'		    # L1
+        fields['PE ->'] = 'forwardPE'                       # M1
+        fields['PE <-'] = 'trailingPE'				        # N1
+        for fld in fields:
+            if not fld in summary_fields:
+                summary_fields += [fld]
+            if fields[fld] in data:
+                val = data[fields[fld]]
+                if val == 0:
+                    val = None  # Make zeros disappear
+                rd[fld] = val
+                print("{} = {}".format(fld, val))
 
     # Pull select data from get_key_statistics_data()
 	# Could be zero or None.
     data = stock.get_key_statistics_data()[ticker]
-    fields = {}
-    fields['Eps ->'] = 'forwardEps'				        # O1
-    fields['Eps <-'] = 'trailingEps'				    # P1
-    fields['Beta'] = 'beta'                             # Q1
-    fields['Book'] = 'bookValue'						# R1
-    fields['Price/Book'] = 'priceToBook'				# S1
-    fields['Outstanding'] = 'sharesOutstanding'			# T1
-    fields['Float'] = 'floatShares'						# U1
-    fields['Short%'] = 'sharesPercentSharesOut'			# V1
-    fields['Insiders%'] = 'heldPercentInsiders'			# W1
-    fields['Institutions%'] = 'heldPercentInstitutions'	# X1
-    fields['Dividend'] = 'lastDividendValue'			# Y1
-    for fld in fields:
-        if not fld in summary_fields:
-            summary_fields += [fld]
-        if fields[fld] in data:
-            val = data[fields[fld]]
-            if val == 0:
-                val = None  # Make zeros disappear
-            rd[fld] = val
-            print("{} = {}".format(fld, val))
+    if data is not None:
+        fields = {}
+        fields['Eps ->'] = 'forwardEps'				        # O1
+        fields['Eps <-'] = 'trailingEps'				    # P1
+        fields['Beta'] = 'beta'                             # Q1
+        fields['Book'] = 'bookValue'						# R1
+        fields['Price/Book'] = 'priceToBook'				# S1
+        fields['Outstanding'] = 'sharesOutstanding'			# T1
+        fields['Float'] = 'floatShares'						# U1
+        fields['Short%'] = 'sharesPercentSharesOut'			# V1
+        fields['Insiders%'] = 'heldPercentInsiders'			# W1
+        fields['Institutions%'] = 'heldPercentInstitutions'	# X1
+        fields['Dividend'] = 'lastDividendValue'			# Y1
+        for fld in fields:
+            if not fld in summary_fields:
+                summary_fields += [fld]
+            if fields[fld] in data:
+                val = data[fields[fld]]
+                if val == 0:
+                    val = None  # Make zeros disappear
+                rd[fld] = val
+                print("{} = {}".format(fld, val))
 
     # Pull select data from get_stock_earnings_data()
     data = stock.get_stock_earnings_data()
-    if data[ticker] == None:
-        print("No earnings data for {}".format(ticker))
-    else:
-        key = 'EPS'
-        if not 'earningsData' in data[ticker]:
-            print("No earnings for {}".format(ticker))
+    if data is not None:
+        if data[ticker] == None:
+            print("No earnings data for {}".format(ticker))
         else:
-            print("Recording {} data".format(key))
-            rd[key] = {}
-            earnings = data[ticker]['earningsData']
-            for q in earnings['quarterly']:
-                eps = {}
-                eps['actual'] = q['actual']
-                eps['estimate'] = q['estimate']
-                rd[key][q['date']] = eps
-            if 'currentQuarterEstimate' in earnings:
-                try: # Create the name of the current quarter EPS value
-                    currentQ = earnings['currentQuarterEstimateDate'] + \
-                        str(earnings['currentQuarterEstimateYear'])
-                except:
-                    currentQ = "NextQ"
-                rd[key][currentQ] = {}
-                rd[key][currentQ]['estimate'] = earnings['currentQuarterEstimate']
+            key = 'EPS'
+            if not 'earningsData' in data[ticker]:
+                print("No earnings for {}".format(ticker))
+            else:
+                print("Recording {} data".format(key))
+                rd[key] = {}
+                earnings = data[ticker]['earningsData']
+                for q in earnings['quarterly']:
+                    eps = {}
+                    eps['actual'] = q['actual']
+                    eps['estimate'] = q['estimate']
+                    rd[key][q['date']] = eps
+                if 'currentQuarterEstimate' in earnings:
+                    try: # Create the name of the current quarter EPS value
+                        currentQ = earnings['currentQuarterEstimateDate'] + \
+                            str(earnings['currentQuarterEstimateYear'])
+                    except:
+                        currentQ = "NextQ"
+                    rd[key][currentQ] = {}
+                    rd[key][currentQ]['estimate'] = earnings['currentQuarterEstimate']
 
-        key = 'Revenue'
-        if not 'financialsData' in data[ticker]:
-            print("No financial data for {}".format(ticker))
-        else:
-            print("Recording {} data".format(key))
-            rd[key] = {}
-            financials = data[ticker]['financialsData']
-            for q in financials['yearly']:
-                rd[key][q['date']] = q['revenue']
-            for q in financials['quarterly']:
-                rd[key][q['date']] = q['revenue']
+            key = 'Revenue'
+            if not 'financialsData' in data[ticker]:
+                print("No financial data for {}".format(ticker))
+            else:
+                print("Recording {} data".format(key))
+                rd[key] = {}
+                financials = data[ticker]['financialsData']
+                for q in financials['yearly']:
+                    rd[key][q['date']] = q['revenue']
+                for q in financials['quarterly']:
+                    rd[key][q['date']] = q['revenue']
 
-            key = 'Earnings'
-            print("Recording {} data".format(key))
-            rd[key] = {}
-            for q in financials['yearly']:
-                rd[key][q['date']] = q['earnings']
-            for q in financials['quarterly']:
-                rd[key][q['date']] = q['earnings']
+                key = 'Earnings'
+                print("Recording {} data".format(key))
+                rd[key] = {}
+                for q in financials['yearly']:
+                    rd[key][q['date']] = q['earnings']
+                for q in financials['quarterly']:
+                    rd[key][q['date']] = q['earnings']
 
     # Pull select data from get_financial_stmts('quarterly', 'income')
     data = stock.get_financial_stmts('quarterly', 'income')['incomeStatementHistoryQuarterly'][ticker]
-    key = 'Income'
-    if data == None:
-        print("No financial {} statement for {}".format(key, ticker))
-    else:
-        print("Recording {} data".format(key))
-        fields = ['totalOperatingExpenses', 'totalOtherIncomeExpenseNet', 'totalRevenue']
-        rd[key] = {}
-        for list in data:
-            for day in list:
-                rd[key][day] = {}
-                for fld in fields:
-                    if fld in list[day]:
-                        rd[key][day][fld] = list[day][fld]
+    if data is not None:
+        key = 'Income'
+        if data == None:
+            print("No financial {} statement for {}".format(key, ticker))
+        else:
+            print("Recording {} data".format(key))
+            fields = ['totalOperatingExpenses', 'totalOtherIncomeExpenseNet', 'totalRevenue']
+            rd[key] = {}
+            for list in data:
+                for day in list:
+                    rd[key][day] = {}
+                    for fld in fields:
+                        if fld in list[day]:
+                            rd[key][day][fld] = list[day][fld]
 
     # Pull select data from get_financial_stmts('quarterly', 'balance')
     data = stock.get_financial_stmts('quarterly', 'balance')['balanceSheetHistoryQuarterly'][ticker]
-    key = 'Balance Sheet'
-    if data == None:
-        print("No financial {} statement for {}".format(key, ticker))
-    else:
-        print("Recording {} data".format(key))
-        fields = ['totalAssets', 'totalCurrentAssets', 'totalCurrentLiabilities',
-                'totalLiab', 'totalStockholderEquity']
-        rd[key] = {}
-        for list in data:
-            for day in list:
-                rd[key][day] = {}
-                for fld in fields:
-                    if fld in list[day]:
-                        rd[key][day][fld] = list[day][fld]
+    if data is not None:
+        key = 'Balance Sheet'
+        if data == None:
+            print("No financial {} statement for {}".format(key, ticker))
+        else:
+            print("Recording {} data".format(key))
+            fields = ['totalAssets', 'totalCurrentAssets', 'totalCurrentLiabilities',
+                    'totalLiab', 'totalStockholderEquity']
+            rd[key] = {}
+            for list in data:
+                for day in list:
+                    rd[key][day] = {}
+                    for fld in fields:
+                        if fld in list[day]:
+                            rd[key][day][fld] = list[day][fld]
 
     # Pull select data from get_financial_stmts('quarterly', 'cash')
     data = stock.get_financial_stmts('quarterly', 'cash')['cashflowStatementHistoryQuarterly'][ticker]
-    key = 'Cash Flow'
-    if data == None:
-        print("No financial {} statement for {}".format(key, ticker))
-    else:
-        print("Recording {} data".format(key))
-        fields = ['totalCashFromFinancingActivities',
-                'totalCashFromOperatingActivities',
-                'totalCashflowsFromInvestingActivities']
-        rd[key] = {}
-        for list in data:
-            for day in list:
-                rd[key][day] = {}
-                for fld in fields:
-                    if fld in list[day]:
-                        rd[key][day][fld] = list[day][fld]
+    if data is not None:
+        key = 'Cash Flow'
+        if data == None:
+            print("No financial {} statement for {}".format(key, ticker))
+        else:
+            print("Recording {} data".format(key))
+            fields = ['totalCashFromFinancingActivities',
+                    'totalCashFromOperatingActivities',
+                    'totalCashflowsFromInvestingActivities']
+            rd[key] = {}
+            for list in data:
+                for day in list:
+                    rd[key][day] = {}
+                    for fld in fields:
+                        if fld in list[day]:
+                            rd[key][day][fld] = list[day][fld]
 
     # Pull select data from get_historical_price_data(start_date, end_date, 'daily')
     start_date = (datetime.today() - timedelta(days=122)).strftime("%Y-%m-%d")
     end_date = datetime.today().strftime("%Y-%m-%d")
-    data = stock.get_historical_price_data(start_date, end_date, 'daily')[ticker]['prices']
-    key = 'History'
-    if data == None:
-        print("No {} statement for {}".format(key, ticker))
-    else:
-        print("Recording {} data".format(key))
-        fields = ['open', 'close', 'volume', 'high', 'low', 'volume', 'adjclose']
-        rd[key] = {}
-        for entry in data:
-            day = entry['formatted_date']
-            rd[key][day] = {}
-            for fld in fields:
-                rd[key][day][fld] = entry[fld]
+    try:
+        data = stock.get_historical_price_data(start_date, end_date, 'daily')[ticker]['prices']
+        key = 'History'
+        if data == None:
+            print("No {} statement for {}".format(key, ticker))
+        else:
+            print("Recording {} data".format(key))
+            fields = ['open', 'close', 'volume', 'high', 'low', 'volume', 'adjclose']
+            rd[key] = {}
+            for entry in data:
+                day = entry['formatted_date']
+                rd[key][day] = {}
+                for fld in fields:
+                    rd[key][day][fld] = entry[fld]
+    except:
+        pass
 
     return rd
 
