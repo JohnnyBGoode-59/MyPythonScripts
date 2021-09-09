@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Name: Camera-Backup
+# Name: Photo-Backup
 # Purpose: Backup photos based upon the date of those photos
 #
 # Author: John Eichenberger
