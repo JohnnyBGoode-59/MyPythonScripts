@@ -94,7 +94,9 @@ def main(source, dest):
                 # Compute CRCs as needed
                 last_modified = os.path.getmtime(pn)
                 if source_modified == None:
-                    print(last_modified)
+                    # print("*debug* {}".format(last_modified))
+                    pass
+                # When source_modified is None, source_crcs is empty
                 if not pn in source_crcs or last_modified > source_modified:
                     AddCrc(pn, source_crcs)
                 if not dest_pn in dest_crcs or last_modified > dest_modified:
@@ -158,4 +160,5 @@ if __name__ == '__main__':
         f.close()
 
     print("\nBackup complete. {} files found. {} files copied.".format(found, copied))
-    print("Completed in {} seconds".format(round(time.time()-start,1)))
+    elapsed = time.gmtime(time.time()-start)
+    print("Completed in %02d:%02d:%02d" %(elapsed.tm_hour, elapsed.tm_min, elapsed.tm_sec))
