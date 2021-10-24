@@ -16,6 +16,8 @@ from crc32 import crc32
 crc_filename = "crc.csv"
 copied = 0
 found = 0
+folders = 0
+hashes = 0
 
 def ReadCrcs(pn):
     """ Return a dictionary of CRC values for every file in a folder """
@@ -32,19 +34,23 @@ def ReadCrcs(pn):
             pn = list[1]
             for more in list[2:]:
                 pn += ','+more
-            crcs[pn] = crc
+            rootp, fn = os.path.split(pn)
+            crcs[fn] = crc
         f.close()
         last_modified = os.path.getmtime(filename)
-    except:
+    except: # open may not find the file
         last_modified = None
     return crcs, last_modified
 
 def AddCrc(pn, crcs):
     """ Add a CRC to a dictionary of CRCs """
+    global hashes
     try:
-        crcs[pn] = crc32(pn)
-    except:
-        crcs[pn] = None
+        rootp, fn = os.path.split(pn)
+        crcs[fn] = crc32(pn)
+        hashes = hashes + 1
+    except: # crc32 may not find the file
+        crcs[fn] = None
 
 def WriteCrcs(pn, crcs):
     """ Save a dictionary of CRC values for every file in a folder """
@@ -55,7 +61,7 @@ def WriteCrcs(pn, crcs):
         for pn in crcs:
             f.write(crcs[pn]+','+pn+'\n')
         f.close()
-    except:
+    except: # the above really should work, or else we have no CRCs
         pass
 
 ##############################################################################
@@ -69,10 +75,11 @@ def backup(src, dst):
 ##############################################################################
 def main(source, dest):
     """ backup one source folder """
-    global crc_filename, found
+    global crc_filename, copied, found, folders
 
     # Start by reading CRC files, if they exist
-    print("Processing {}".format(source))
+    print("Processing {}: {} folders, {} files, {} hashed {} copied".format(source, folders, found, hashes, copied))
+    folders = folders + 1
     source_crcs, source_modified = ReadCrcs(source)
     if not os.path.isdir(dest):
         # print("*Debug* mkdir {}".format(dest))
@@ -97,13 +104,13 @@ def main(source, dest):
                     # print("*debug* {}".format(last_modified))
                     pass
                 # When source_modified is None, source_crcs is empty
-                if not pn in source_crcs or last_modified > source_modified:
+                if not fn in source_crcs or last_modified > source_modified:
                     AddCrc(pn, source_crcs)
-                if not dest_pn in dest_crcs or last_modified > dest_modified:
+                if not fn in dest_crcs or last_modified > dest_modified:
                     AddCrc(dest_pn, dest_crcs)
 
                 # Skip files that have matching CRCs
-                if source_crcs[pn] == dest_crcs[dest_pn]:
+                if source_crcs[fn] == dest_crcs[fn]:
                     continue    # matching files need not be backed up
 
                 # Backup the rest
