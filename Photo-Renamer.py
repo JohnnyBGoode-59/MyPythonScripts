@@ -126,8 +126,9 @@ def rename(pn, strip, reset, recursive):
             m = re.search("^([A-Z])*?"+sep+date_group+"(.*)", fn)
             if m is not None and len(m.groups()) == 3:
                 fn = m.group(3)     # 1=prefix, 2=date, 3=filename.ext
-                if len(fn) < 4:     # period in file extension may get stripped
-                    fn = '.'+fn
+                if len(fn) <= 4:    # period in file extension may get stripped
+                    if len(fn) < 4: # or perhaps the filename is just gone
+                        fn = '.'+fn
                     prefix = prefix[:-1]
                 else:
                     m = re.search("^([\-\._~ ])*(.*)", fn)
