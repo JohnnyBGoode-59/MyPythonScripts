@@ -68,7 +68,7 @@ def WriteCrcs(pn, crcs):
 def backup(src, dst):
     """ backup one source file """
     global copied
-    print("copy {} {}".format(src, dst))
+    print('copy "{}" "{}"'.format(src, dst))
     copyfile(src, dst)
     copied = copied + 1
 
@@ -145,7 +145,6 @@ if __name__ == '__main__':
     if userprofile is None:
         print("USERPROFILE is not defined as an environment variable")
         exit()
-    os.chdir(userprofile)
 
     # If a source and destination is specified on the command line, use those
     if len(sys.argv) == 3:  # command source destination
@@ -153,6 +152,7 @@ if __name__ == '__main__':
 
     else:
         try:
+            os.chdir(userprofile)
             f = open("Backup.ini")
         except:
             print("{}\Backup.ini not found")
