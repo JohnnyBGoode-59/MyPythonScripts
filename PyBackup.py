@@ -22,18 +22,25 @@ corrupted = 0   # used just for CRC files that cannot be read or written correct
 crc_missing = 0 # source files found with no matching CRC
                 # or destination files found with an existing CRC file but no CRC
 crc_broken = 0  # actual CRC is different than CRC file, or crc32 failed
-copy_broken = 0 # a copy failed
+copy_broken = 0 # a copy failed or a CRC file failed to be created
 logfile = "backup.log.txt"  # opened in the %TEMP% folder
 
-def logerror(msg):
+def logerror(msg, pathname=None):
     """ Log severe errors """
     global logfile
 
+    if pathname == None:
+        fullmsg = msg + '\r'
+        shortmsg = msg + ' (logged)'
+    else:
+        fullmsg = pathname + ": " + msg + '\r'
+        shortmsg = nickname(pathname) + ": " + msg + ' (logged)'
+
     if logfile != None:
         log = open(logfile, 'a')
-        log.write(msg+'\r')
+        log.write(fullmsg)
         log.close()
-    print(msg + ' (logged)')
+    print(shortmsg)
 
 def ReadCrcs(pn):
     """ Return a dictionary of CRC values for every file in a folder """
@@ -65,7 +72,7 @@ def ReadCrcs(pn):
         os.remove(filename)
         crcs = {}
         last_modified = None
-        logerror(filename + ": Corrupt file removed")
+        logerror("corrupt file removed", filename)
         corrupted = corrupted + 1
 
     return crcs, last_modified
@@ -84,12 +91,12 @@ def AddCrc(pn, crcs, crc = None):
     except: # crc32 must have failed
         if fn in crcs:
             crcs.remove(fn)
-        logerror(pn + ": failed to compute CRC")
+        logerror("failed to compute CRC", pn)
         crc_broken = crc_broken + 1
 
 def WriteCrcs(pn, crcs):
     """ Save a dictionary of CRC values for every file in a folder """
-    global crc_filename, corrupted
+    global crc_filename, corrupted, copy_broken
     try:
         filename = pn+'\\'+crc_filename
         f = open(filename, 'w')
@@ -97,13 +104,14 @@ def WriteCrcs(pn, crcs):
             f.write(crcs[pn]+','+pn+'\n')
         f.close()
     except: # the above really should work, or else we have no CRCs
-        logerror(filename + ": could not be created")
+        logerror("could not be created", filename)
         corrupted = corrupted + 1
+        copy_broken = copy_broken + 1
 
 def nickname(source):
     """ Shorten really long names when all I really need is the basics. """
-    if len(source) > 65:
-        return source[0:30] + "[...]" + source[-30:]
+    if len(source) > 75:
+        return source[0:32] + "[...]" + source[-38:]
     return source
 
 def verify(source):
@@ -116,7 +124,7 @@ def verify(source):
     if source_modified == None:
         # Don't log errors when the CRC file is missing
         # Simply compute the crc for all the files found
-        logerror(source + ": missing CRC file")
+        logerror("missing CRC file", source)
         crc_missing = crc_missing + 1
         missing = True
     else:
@@ -139,14 +147,14 @@ def verify(source):
                     crc = crc32(pn)
                     if not missing:
                         if fn not in source_crcs:
-                            logerror(pn + ": missing CRC")
+                            logerror("missing CRC", pn)
                             crc_missing = crc_missing + 1
                         elif source_crcs[fn] != crc:
-                            logerror(pn + ": mismatched CRC")
+                            logerror("mismatched CRC", pn)
                             crc_broken = crc_broken + 1
                     AddCrc(pn, source_crcs, crc)
                 except: # crc32 may not find the file
-                    logerror(pn + ": failed to compute CRC")
+                    logerror("failed to compute CRC", pn)
                     crc_broken = crc_broken + 1
 
         elif os.path.isdir(pn):
@@ -159,7 +167,8 @@ def verify(source):
 def backup(src, dst):
     """ backup one source file """
     global copied, copy_broken
-    print('copy "{}" "{}"'.format(src, dst))
+    rootp, srcfn = os.path.split(src)
+    print('copy "{}"'.format(srcfn))
     try:
         copyfile(src, dst)
         copied = copied + 1
@@ -168,6 +177,13 @@ def backup(src, dst):
         logerror("copyfile(" + src + ',' + dst + "): failed")
         copy_broken = copy_broken + 1
         return 0
+
+def recursive_mkdir(pn):
+    if not os.path.isdir(pn):
+        rootp, fn = os.path.split(pn)
+        if not os.path.isdir(rootp) and len(rootp) > 0:
+            recursive_mkdir(rootp)
+        os.mkdir(pn)
 
 ##############################################################################
 def main(source, dest):
@@ -179,9 +195,7 @@ def main(source, dest):
         nickname(source), folders, found, hashes, copied))
     folders = folders + 1
     source_crcs, source_modified = ReadCrcs(source)
-    if not os.path.isdir(dest):
-        # print("*Debug* mkdir {}".format(dest))
-        os.mkdir(dest)
+    recursive_mkdir(dest)
     dest_crcs, dest_modified = ReadCrcs(dest)
 
     # Recursively search the source folder
@@ -204,13 +218,20 @@ def main(source, dest):
                 # When source_modified is None, source_crcs is empty
                 if not fn in source_crcs or last_modified > source_modified:
                     AddCrc(pn, source_crcs)
-                if not fn in dest_crcs or last_modified > dest_modified or not exists(dest_pn):
-                    # Note that the destination CRC will be REMOVED when the file does not exist
-                    AddCrc(dest_pn, dest_crcs)
+                if not fn in dest_crcs or last_modified > dest_modified:
+                    if os.path.exists(dest_pn):
+                        AddCrc(dest_pn, dest_crcs)
 
-                # Only backup files that do not have matching CRCs
-                if source_crcs[fn] != dest_crcs[fn]:
-                    backup(pn, dest_pn, dest_crcs)
+                # Only backup files for which a CRC has been computed
+                # with no matching destination file
+                if fn in source_crcs:   # do we have a CRC?
+                    if fn in dest_crcs: # does the file exist at the destination?
+                        if source_crcs[fn] != dest_crcs[fn]:    # is it a matching file?
+                            if backup(pn, dest_pn):
+                                AddCrc(dest_pn, dest_crcs)  # replace the crc
+                    else:   # Adding a file to the destination
+                        if backup(pn, dest_pn):
+                            AddCrc(dest_pn, dest_crcs)  # add the crc
 
         elif os.path.isdir(pn):
             # For every subfolder
@@ -270,6 +291,8 @@ if __name__ == '__main__':
         print( "{} corrupted crc files".format(corrupted))
         print( "{} missing crcs".format(crc_missing))
         print( "{} crc/file errors".format(crc_broken))
+        if copy_broken != 0:
+            print("{} crc failed to be created.".format(copy_broken))
         elapsed = time.gmtime(time.time()-start)
         print("Completed in %02d:%02d:%02d" %(elapsed.tm_hour, elapsed.tm_min, elapsed.tm_sec))
         exit()
@@ -315,5 +338,7 @@ if __name__ == '__main__':
     print("\nBackup complete.\n{} files found. {} files copied.".format(found, copied))
     if corrupted != 0:
         print("{} corrupted crc files replaced.".format(corrupted))
+    if copy_broken != 0:
+        print("{} files failed to copy.".format(copy_broken))
     elapsed = time.gmtime(time.time()-start)
     print("Completed in %02d:%02d:%02d" %(elapsed.tm_hour, elapsed.tm_min, elapsed.tm_sec))
