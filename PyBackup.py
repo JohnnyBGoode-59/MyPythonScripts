@@ -18,7 +18,11 @@ copied = 0
 found = 0
 folders = 0
 hashes = 0
-corrupted = 0
+corrupted = 0   # used just for CRC files that cannot be read or written correctly
+crc_missing = 0 # source files found with no matching CRC
+                # or destination files found with an existing CRC file but no CRC
+crc_broken = 0  # actual CRC is different than CRC file, or crc32 failed
+copy_broken = 0 # a copy failed
 logfile = "backup.log.txt"  # opened in the %TEMP% folder
 
 def logerror(msg):
@@ -57,30 +61,35 @@ def ReadCrcs(pn):
 
     except:
         # The file must be corrupted. Delete it and discard all crcs.
-        logerror("Corrupt file removed: " + filename)
         f.close()
         os.remove(filename)
         crcs = {}
         last_modified = None
+        logerror(filename + ": Corrupt file removed")
         corrupted = corrupted + 1
 
     return crcs, last_modified
 
-def AddCrc(pn, crcs):
-    """ Add a CRC to a dictionary of CRCs """
-    global hashes
+def AddCrc(pn, crcs, crc = None):
+    """ Add a CRC to a dictionary of CRCs.
+        This should only be called for an existing file.
+        """
+    global hashes, crc_broken
+    rootp, fn = os.path.split(pn)
     try:
-        rootp, fn = os.path.split(pn)
-        crcs[fn] = crc32(pn)
-        hashes = hashes + 1
-    except: # crc32 may not find the file
+        if crc == None:
+            crc = crc32(pn)
+            hashes = hashes + 1
+        crcs[fn] = crc
+    except: # crc32 must have failed
         if fn in crcs:
             crcs.remove(fn)
-        logerror(pn + ": failure to compute CRC")
+        logerror(pn + ": failed to compute CRC")
+        crc_broken = crc_broken + 1
 
 def WriteCrcs(pn, crcs):
     """ Save a dictionary of CRC values for every file in a folder """
-    global crc_filename
+    global crc_filename, corrupted
     try:
         filename = pn+'\\'+crc_filename
         f = open(filename, 'w')
@@ -88,29 +97,33 @@ def WriteCrcs(pn, crcs):
             f.write(crcs[pn]+','+pn+'\n')
         f.close()
     except: # the above really should work, or else we have no CRCs
-        logfile("Could not create: " + filename)
+        logerror(filename + ": could not be created")
+        corrupted = corrupted + 1
 
-def backup(src, dst):
-    """ backup one source file """
-    global copied
-    print('copy "{}" "{}"'.format(src, dst))
-    try:
-        copyfile(src, dst)
-    except:
-        logerror("copyfile(" + src + ',' + dst + "): failed")
-    copied = copied + 1
+def nickname(source):
+    """ Shorten really long names when all I really need is the basics. """
+    if len(source) > 65:
+        return source[0:30] + "[...]" + source[-30:]
+    return source
 
 def verify(source):
     """ check crc values for one folder """
-    global crc_filename, found, folders, corrupted
+    global crc_filename, found, folders
+    global corrupted, crc_missing, crc_broken
 
     # Start by reading CRC files, if they exist
     source_crcs, source_modified = ReadCrcs(source)
     if source_modified == None:
-        logerror(source + ": Not validated, missing CRC file.")
-        return
+        # Don't log errors when the CRC file is missing
+        # Simply compute the crc for all the files found
+        logerror(source + ": missing CRC file")
+        crc_missing = crc_missing + 1
+        missing = True
+    else:
+        missing = False
 
-    print("Processing {}: {} folders, {} files, {} possibly corrupted".format(source, folders, found, corrupted))
+    print("Processing {}: {} folders, {} files, {} errors".format(\
+        nickname(source), folders, found, corrupted+crc_missing+crc_broken))
     folders = folders + 1
 
     # Recursively search the source folder
@@ -118,26 +131,43 @@ def verify(source):
         # print("*Debug* Found {}".format(pn))
         rootp, fn = os.path.split(pn)
         if os.path.isfile(pn):
-            if fn == crc_filename:
-                pass
-            else:
-                # For every file in the source folder
+            if fn != crc_filename:  # ignore the CRC control file
+                # For every other file in the source folder
                 found = found + 1
+                rootp, fn = os.path.split(pn)
                 try:
-                    rootp, fn = os.path.split(pn)
-                    if fn not in source_crcs:
-                        logerror(pn + ": missing CRC")
-                        corrupted = corrupted + 1
-                    elif source_crcs[fn] != crc32(pn):
-                        logerror(pn + ": mismatched CRC")
-                        corrupted = corrupted + 1
+                    crc = crc32(pn)
+                    if not missing:
+                        if fn not in source_crcs:
+                            logerror(pn + ": missing CRC")
+                            crc_missing = crc_missing + 1
+                        elif source_crcs[fn] != crc:
+                            logerror(pn + ": mismatched CRC")
+                            crc_broken = crc_broken + 1
+                    AddCrc(pn, source_crcs, crc)
                 except: # crc32 may not find the file
-                    logerror(pn + ": failure to compute CRC")
-                    corrupted = corrupted + 1
+                    logerror(pn + ": failed to compute CRC")
+                    crc_broken = crc_broken + 1
 
         elif os.path.isdir(pn):
             # For every subfolder
             verify(pn)
+
+    # Finish off by replacing CRC files
+    WriteCrcs(source, source_crcs)
+
+def backup(src, dst):
+    """ backup one source file """
+    global copied, copy_broken
+    print('copy "{}" "{}"'.format(src, dst))
+    try:
+        copyfile(src, dst)
+        copied = copied + 1
+        return 1
+    except:
+        logerror("copyfile(" + src + ',' + dst + "): failed")
+        copy_broken = copy_broken + 1
+        return 0
 
 ##############################################################################
 def main(source, dest):
@@ -145,7 +175,8 @@ def main(source, dest):
     global crc_filename, copied, found, folders
 
     # Start by reading CRC files, if they exist
-    print("Processing {}: {} folders, {} files, {} hashed, {} copied".format(source, folders, found, hashes, copied))
+    print("Processing {}: {} folders, {} files, {} hashed, {} copied".format(\
+        nickname(source), folders, found, hashes, copied))
     folders = folders + 1
     source_crcs, source_modified = ReadCrcs(source)
     if not os.path.isdir(dest):
@@ -222,6 +253,11 @@ if __name__ == '__main__':
                 "\n1) no parameters\t-- backup folders using ~\\backup.ini"
                 "\n2) souce dest\t\t-- backup one folder"
                 "\n3) -v [folders]\t\t-- check crcs in a list of folders")
+        print("\nValidation details:")
+        print("A crc file is counted as corrupted when an exception occurs while reading or writing a control file.")
+        print("A crc is counted as missing once for each control file or once for each data file.")
+        print("A crc/file error is counted when an crc exception occurs or the wrong crc is computed.")
+        print("Whenever possible the crc control file will be updated to match the current data.")
         exit()
 
     # Next look for the new -v switch, used to check CRCs for each folder listed
@@ -229,7 +265,11 @@ if __name__ == '__main__':
     if len(sys.argv) >= 2 and sys.argv[1] == "-v":
         for pn in sys.argv[2:]:
             verify(pn)
-        print("\nVerify complete.\n{} files, {} possibly corrupted".format(found, corrupted))
+        print("\nVerify complete")
+        print( "{} files,".format(found))
+        print( "{} corrupted crc files".format(corrupted))
+        print( "{} missing crcs".format(crc_missing))
+        print( "{} crc/file errors".format(crc_broken))
         elapsed = time.gmtime(time.time()-start)
         print("Completed in %02d:%02d:%02d" %(elapsed.tm_hour, elapsed.tm_min, elapsed.tm_sec))
         exit()
