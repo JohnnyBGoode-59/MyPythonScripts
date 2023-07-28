@@ -69,10 +69,13 @@ def ReadCrcs(pn):
     except:
         # The file must be corrupted. Delete it and discard all crcs.
         f.close()
-        os.remove(filename)
         crcs = {}
         last_modified = None
-        logerror("corrupt file removed", filename)
+        try:
+            os.remove(filename)
+            logerror("corrupt file removed", filename)
+        except:
+            logerror("corrupt file cannot be removed", filename)
         corrupted = corrupted + 1
 
     return crcs, last_modified
