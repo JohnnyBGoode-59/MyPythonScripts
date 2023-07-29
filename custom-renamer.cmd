@@ -1,4 +1,5 @@
 @echo off
+Rem Create a batch rename operation to rename a set of files in a similar way.
 SetLocal
 set tfile=%temp%\rn.cmd
 if exist %tfile% del %tfile%
