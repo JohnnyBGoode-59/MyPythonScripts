@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
     # Find files and get the names for them all
     if os.path.isdir(pn):
-        for fn in glob.glob(os.path.abspath(pn + '\\' + filespec)):
+        for fn in glob.glob(glob.escape(os.path.abspath(pn + '\\' + filespec))):
             if os.path.isfile(fn):
                 found = found + 1
                 rename_list += [fn]

@@ -202,8 +202,7 @@ def verify(source):
     folders = folders + 1
 
     # Recursively search the source folder
-    for listdirfn in os.listdir(source):    # glob.glob(source + '\\*'): failed me
-        pn = source + '\\' + listdirfn
+    for pn in glob.glob(glob.escape(source) + '\\*'):
         # print("*Debug* Found {}".format(pn))
         rootp, fn = os.path.split(pn)
         if os.path.isfile(pn):

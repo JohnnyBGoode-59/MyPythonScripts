@@ -21,13 +21,13 @@ def Finder(pn, recursive):
 
     if os.path.isdir(pn):
         # find files
-        for fn in glob.glob(pn + '\\' + filespec):
+        for fn in glob.glob(glob.escape(pn) + '\\' + filespec):
             if os.path.isfile(fn):
                 Finder(fn, recursive)
 
         # perform recursion
         if recursive:
-            for fn in glob.glob(pn + "\\*"):
+            for fn in glob.glob(glob.escape(pn) + "\\*"):
                 if os.path.isdir(fn):
                     Finder(fn, recursive)
     else:

@@ -158,7 +158,7 @@ def main():
 if __name__ == '__main__':
     for arg in sys.argv[1:]:
         if os.path.isdir(arg):
-            for pn in glob.glob(arg + '\\*.*'):
+            for pn in glob.glob(glob.escape(arg) + '\\*'):
                 if os.path.isfile(pn):
                     dim = GetExifDimensions(pn)
                     if dim is not None:

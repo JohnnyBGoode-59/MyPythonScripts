@@ -29,13 +29,13 @@ def rename(pn, strip, reset, recursive):
 
     # Optionally process folders recursively
     if os.path.isdir(pn):
-        for fn in glob.glob(pn + '\\' + filespec):
+        for fn in glob.glob(glob.escape(pn) + '\\' + filespec):
             if os.path.isfile(fn):
                 rename(fn, strip, reset, recursive)
 
         # Perform recursion with a unique filespec
         if recursive:
-            for fn in glob.glob(pn + "\\*"):
+            for fn in glob.glob(glob.escape(pn) + "\\*"):
                 if os.path.isdir(fn):
                     rename(fn, strip, reset, recursive)
         return
