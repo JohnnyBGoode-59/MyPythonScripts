@@ -7,7 +7,7 @@
 	<META NAME="AUTHOR" CONTENT="John Eichenberger">
 	<META NAME="CREATED" CONTENT="20230729;6215387">
 	<META NAME="CHANGEDBY" CONTENT="John Eichenberger">
-	<META NAME="CHANGED" CONTENT="20230731;15524575">
+	<META NAME="CHANGED" CONTENT="20230801;11585820">
 	<STYLE TYPE="text/css">
 	<!--
 		@page { margin: 0.79in }
@@ -47,14 +47,18 @@ data and back it up</H1>
 <P>This step creates a folder named Step1 that initially contains no
 problematic files. It is copied to the Step0 folder to record that
 initial setup.</P>
+<P>Amendment: I discovered one must be careful of files containing
+brackets in the folder name. So a test for that was added to this
+step. This also creates path names that get abbreviated, which is
+nice to see.</P>
 <H2 CLASS="western">Step 1 results, part 1: Windiff Step0 Step1</H2>
 <P STYLE="font-weight: normal">There are no differences between the
 two folders.</P>
 <H2 CLASS="western">Step 1 results, part 2: pybackup.step1.log.txt</H2>
-<P STYLE="font-weight: normal">Backup complete.<BR>3 folders.<BR>9
-files.<BR>18 hashed files.</P>
-<P STYLE="font-weight: normal">Note: each of the 9 files is hashed
-both in the Step1 and Step0 folders.</P>
+<P STYLE="font-weight: normal">Backup complete.<BR>5 folders.<BR>12
+files.<BR>24 hashed files.</P>
+<P STYLE="font-weight: normal">Note: each of the files is hashed
+twice, once in the Step1 and once in the Step0.</P>
 <P STYLE="font-weight: normal">The step0 files are all listed as
 modified with no hidden, system, or read-only attributes.<BR>The
 step1 files are listed as unmodified except for crc files and
@@ -100,38 +104,39 @@ changed<BR>step0\CorruptCRC\crc.csv: corrupt file
 removed<BR>step2\CorruptCRC\crc.csv: corrupt file
 removed<BR>step2\CorruptCRC\ReadMe.txt: is new<BR>step2\new.txt: is
 new<BR>step2\NoCRC\ReadMe.txt: is new</P>
-<P>Backup complete.<BR>4 folders.<BR>10 files.<BR>3 copied files.<BR>11
+<P>Backup complete.<BR>6 folders.<BR>13 files.<BR>3 copied files.<BR>11
 hashed files.<BR>2 corrupted crc files.<BR>4 unexpected new/modified
 backup files.<BR>1 deleted file.</P>
 <H1 CLASS="western"><B>Step 3: Verify the backup performed in step 2</B></H1>
 <P STYLE="font-weight: normal">Run <B>Step3.PyBackup.cmd </B>to
 perform a verify and check the results.</P>
 <P STYLE="font-weight: normal">step3\ignored.txt: missing CRC</P>
-<P STYLE="font-weight: normal">Verify complete<BR>4 folders.<BR>12
+<P STYLE="font-weight: normal">Verify complete<BR>6 folders.<BR>15
 files.<BR>1 missing crc.</P>
 <P STYLE="font-weight: normal">The <B>ignored</B> file now has a
 recorded CRC.</P>
 <H1 CLASS="western"><B>Step 4: Backup files to a new network folder</B></H1>
-<P><SPAN STYLE="font-weight: normal">This backs up step 3 data to a
-network drive.</SPAN></P>
+<P STYLE="font-weight: normal">This backs up step 3 data to a network
+drive.</P>
 <H2 CLASS="western">Step 4 results, part 1: Windiff step3 step4</H2>
 <P STYLE="font-weight: normal">No differences.</P>
 <H2 CLASS="western">Step 4 results, part 2: pybackup.step4.log.txt</H2>
-<P STYLE="font-weight: normal">Backup complete.<BR>4 folders.<BR>12
-files.<BR>12 copied files.<BR>12 hashed files.</P>
+<P STYLE="font-weight: normal">Backup complete.<BR>6 folders.<BR>15
+files.<BR>15 copied files.<BR>15 hashed files.</P>
 <H1 CLASS="western"><B>Step 5: Backup files with no changes to an
 existing network folder</B></H1>
-<P><SPAN STYLE="font-weight: normal">This backs up step 4 data from a
+<P STYLE="font-weight: normal">This backs up step 4 data from a
 network drive to a temp folder. However, the destination folder
-already has the same data so no files are actually copied.</SPAN></P>
+already has the same data so no files are actually copied.</P>
 <H2 CLASS="western">Step 5 results, part 1: Windiff step4 step5</H2>
 <P STYLE="font-weight: normal">No differences.</P>
 <H2 CLASS="western">Step 5 results, part 2: pybackup.step5.log.txt</H2>
-<P STYLE="font-weight: normal">Backup complete.<BR>4 folders.<BR>12
+<P STYLE="font-weight: normal">Backup complete.<BR>6 folders.<BR>15
 files.</P>
 <P STYLE="font-weight: normal">Note: the network based files still
 have the archive attribute set on them.</P>
-<H1 CLASS="western"><B>Step 6: Errors reading/writing source files</B></H1>
+<H1 CLASS="western"><B>Step 6: Force errors reading/writing source
+files</B></H1>
 <P>In this step the <B>Inaccessible </B><SPAN STYLE="font-weight: normal">files
 are made unreadable before backing up data.</SPAN></P>
 <H2 CLASS="western">Step 6 results, part 1: Windiff step5 step6</H2>
@@ -141,8 +146,8 @@ step5</P>
 <H2 CLASS="western">Step 6 results, part 2: pybackup.step6.log.txt</H2>
 <P STYLE="font-weight: normal">step5\Inaccessible\ReadMe.txt: failed
 to compute CRC<BR>step5\Inaccessible\crc.csv: could not be created</P>
-<P STYLE="font-weight: normal">Backup complete.<BR>4 folders.<BR>13
-files.<BR>12 copied files.<BR>13 hashed files.<BR>1 compute crc
+<P STYLE="font-weight: normal">Backup complete.<BR>6 folders.<BR>16
+files.<BR>15 copied files.<BR>16 hashed files.<BR>1 compute crc
 error.<BR>1 failure to copy or create error.</P>
 <H1 CLASS="western"><B>Step 7: Fail access data and/or crc source
 files</B></H1>
@@ -164,7 +169,7 @@ failed<BR>step7\Inaccessible\ReadMe.txt: is
 new<BR>step7\Inaccessible\ReadMe.txt: failed to compute
 CRC<BR>copyfile(step6\Inaccessible\ReadMe.txt,step7\Inaccessible\ReadMe.txt):
 failed<BR>step7\Inaccessible\crc.csv: could not be created</P>
-<P STYLE="font-weight: normal">Backup complete.<BR>4 folders.<BR>13
+<P STYLE="font-weight: normal">Backup complete.<BR>6 folders.<BR>16
 files.<BR>1 hashed file.<BR>2 compute crc errors.<BR>3 failure to
 copy or create errors.<BR>2 unexpected new/modified backup files.</P>
 <H1 CLASS="western"><B>Step 8: Encounter hard errors while validating</B></H1>
@@ -182,7 +187,7 @@ missing CRC file<BR>step8\Inaccessible\acl.txt: failed to compute
 CRC<BR>step8\Inaccessible\ReadMe.txt: failed to compute
 CRC<BR>step8\Inaccessible\crc.csv: could not be created<BR>step8\NoCRC:
 missing CRC file<BR>step8\verifyme.txt: missing CRC</P>
-<P STYLE="font-weight: normal">Verify complete.<BR>4 folders.<BR>13
+<P STYLE="font-weight: normal">Verify complete.<BR>6 folders.<BR>16
 files.<BR>1 corrupted crc file.<BR>4 missing crcs.<BR>3 compute crc
 errors.<BR>1 failure to copy or create error.<BR>1 deleted file.</P>
 <H1 CLASS="western"><B>Step 9: Encounter hard errors while backing up</B></H1>
@@ -200,7 +205,7 @@ CRC<BR>copyfile(step8\Inaccessible\CannotReplace.txt,step9\Inaccessible\CannotRe
 failed</P>
 <P STYLE="font-weight: normal"><BR><BR>
 </P>
-<P STYLE="font-weight: normal">Backup complete.<BR>4 folders.<BR>15
+<P STYLE="font-weight: normal">Backup complete.<BR>6 folders.<BR>18
 files.<BR>3 copied files.<BR>6 hashed files.<BR>2 compute crc
 errors.<BR>1 failure to copy or create error.<BR>1 unexpected
 new/modified backup file.</P>
