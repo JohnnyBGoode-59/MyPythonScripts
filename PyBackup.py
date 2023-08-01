@@ -286,8 +286,7 @@ def main(source, dest):
                 dest_crcs.pop(fn)
 
     # Recursively search the source folder
-    for listdirfn in os.listdir(source):    # glob.glob(source + '\\*'): failed me
-        pn = source + '\\' + listdirfn
+    for pn in glob.glob(glob.escape(source) + '\\*'):
         rootp, fn = os.path.split(pn)
         if os.path.isfile(pn):
             if fn == crc_filename:
