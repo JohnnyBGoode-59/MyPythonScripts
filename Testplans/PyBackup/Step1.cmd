@@ -25,6 +25,18 @@ echo Step1: This file is read-only>readonly.txt
 echo Step1: This file is hidden>hidden.txt
 echo Step1: This file is a system file>system.txt
 
+Rem A filename cannot contain any I/O redirection characters or any of these: \ / : * ? "
+Rem So let's  some strange filenames and folders as a test.
+set strange="strange(~!@#$%^&+={2};',)named."
+echo Step1: Strange filename test 1>>%strange%file1.txt
+md %strange%folder
+echo Step1: Strange pathname test 2>>%strange%folder\%strange%file2.txt"
+
+Rem These test cases were known to fail in the past
+set strange="[folder]"
+md %strange%
+echo Step1: Files found in a folder with square bracketts in the name>>%strange%\Known-issue.txt
+
 md CorruptCRC
 echo Step1: This folder will be used to test a purposely corrupted CRC control file>CorruptCRC\ReadMe.txt
 

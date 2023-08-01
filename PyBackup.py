@@ -202,7 +202,8 @@ def verify(source):
     folders = folders + 1
 
     # Recursively search the source folder
-    for pn in glob.glob(source + '\\*'):
+    for listdirfn in os.listdir(source):    # glob.glob(source + '\\*'): failed me
+        pn = source + '\\' + listdirfn
         # print("*Debug* Found {}".format(pn))
         rootp, fn = os.path.split(pn)
         if os.path.isfile(pn):
@@ -286,7 +287,8 @@ def main(source, dest):
                 dest_crcs.pop(fn)
 
     # Recursively search the source folder
-    for pn in glob.glob(source + '\\*'):
+    for listdirfn in os.listdir(source):    # glob.glob(source + '\\*'): failed me
+        pn = source + '\\' + listdirfn
         rootp, fn = os.path.split(pn)
         if os.path.isfile(pn):
             if fn == crc_filename:
