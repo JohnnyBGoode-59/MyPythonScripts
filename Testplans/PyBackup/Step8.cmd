@@ -17,8 +17,8 @@ del deleted.txt
 echo Step 8: A changed file>changed.txt
 del NoCRC\crc.csv
 dir >CorruptCRC\crc.csv
-icacls Inaccessible\*.* /inheritance:d
-icacls Inaccessible\*.* /remove %USERNAME%
+icacls Inaccessible\*.* /inheritance:d /q
+icacls Inaccessible\*.* /remove %USERNAME% /q
 type Inaccessible\readme.txt
 
 @echo on
@@ -29,7 +29,7 @@ pybackup -v step8
 
 Rem Before running doing anything else, restore permissions
 cd step8
-icacls Inaccessible\*.* /inheritance:e
+icacls Inaccessible\*.* /inheritance:e /q
 cd ..
 
 Rem Review the errors that occurred

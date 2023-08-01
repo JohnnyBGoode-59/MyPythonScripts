@@ -15,8 +15,8 @@ cd step7
 attrib -a *.* /s
 echo Step 7: The folder will be used to test Inaccessible files>Inaccessible\ReadMe.txt
 Rem Protect the files in the folder named Inaccessible	
-icacls Inaccessible\*.* /inheritance:d
-icacls Inaccessible\*.* /remove %USERNAME%
+icacls Inaccessible\*.* /inheritance:d /q
+icacls Inaccessible\*.* /remove %USERNAME% /q
 
 @echo on
 cd %temp%\pybackup
@@ -26,7 +26,7 @@ pybackup step6 step7
 
 Rem Before running doing anything else, restore permissions
 Rem that will keep Windiff from bogging down
-icacls step7\Inaccessible\*.* /inheritance:e
+icacls step7\Inaccessible\*.* /inheritance:e /q
 
 Rem See how the destination folder compares with the source.
 "C:\Program Files\WinDiff\windiff.exe" %temp%\pybackup\step6 %temp%\pybackup\step7

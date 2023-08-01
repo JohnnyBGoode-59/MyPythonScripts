@@ -13,8 +13,8 @@ cd %temp%\pybackup\step5
 attrib -a *.* /s
 
 Rem Protect the files in the folder named Inaccessible	
-icacls Inaccessible\*.* /inheritance:d
-icacls Inaccessible\*.* /remove %USERNAME%
+icacls Inaccessible\*.* /inheritance:d /q
+icacls Inaccessible\*.* /remove %USERNAME% /q
 Echo Step 5: Both crc.csv and ReadMe.Txt are now inaccessible.>Inaccessible\acl.txt
  
 
@@ -26,7 +26,7 @@ ren %temp%\pybackup.log.txt pybackup.step6.log.txt
 
 Rem Before running doing anything else, restore permissions
 Rem that will keep Windiff from bogging down
-icacls step5\Inaccessible\*.* /inheritance:e
+icacls step5\Inaccessible\*.* /inheritance:e /q
 
 Rem See how the destination folder compares with the source.
 "C:\Program Files\WinDiff\windiff.exe" %temp%\pybackup\step5 %temp%\pybackup\step6
