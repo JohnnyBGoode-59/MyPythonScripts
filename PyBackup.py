@@ -9,13 +9,13 @@
 # Licence:     GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
 #-------------------------------------------------------------------------------
 
-import glob, os, sys, time, zlib
+import glob, os, re, sys, time, zlib
 from shutil import copyfile
 from crc32 import crc32
 
 ini_filename = "backup.ini"
 crc_filename = "crc.csv"        # the control file found in every folder
-logfile = "PyBackup.log.txt"    # opened in the %TEMP% folder
+logfile = None
 
 copied = 0      # files copied
 found = 0       # files found
@@ -113,14 +113,16 @@ def ReadCrcs(pn):
         return crcs, None
 
     try:
+        # Every line in a CRC file is 8 hexadecimal characters, a comma
+        # and the pathname. The pathname may be quoted.
         for line in f:
-            if line[-1] == '\n':
-                line = line[:-1]
-            list = line.split(',')  # careful, some names have commas
-            crc = list[0]
-            pn = list[1]
-            for more in list[2:]:   # this should fix those names
-                pn += ','+more
+            # First match a quoted pathname, if possible
+            m = re.match('([0-9A-F]{8}),"(.*?)"', line)
+            # If that fails, match a pathname with no quotes
+            if m == None:
+                m = re.match('([0-9A-F]{8}),(.*)', line)
+            crc = m.group(1)
+            pn = m.group(2)
             rootp, fn = os.path.split(pn)
             crcs[fn] = crc
         f.close()
@@ -163,8 +165,9 @@ def WriteCrcs(pn, crcs):
     try:
         filename = pn+'\\'+crc_filename
         f = open(filename, 'w')
-        for pn in sorted(crcs):
-            f.write(crcs[pn]+','+pn+'\n')
+        for fn in sorted(crcs):
+            # Quote the pathname to make it work better in Excel
+            f.write(crcs[fn]+',"'+fn+'"\n')
         f.close()
     except: # the above really should work, or else we have no CRCs
         logerror("could not be created", filename)
@@ -261,6 +264,7 @@ def backup(src, dst):
         return 0
 
 def recursive_mkdir(pn):
+    """ Create a folder, recursively if necessary """
     if not os.path.isdir(pn):
         rootp, fn = os.path.split(pn)
         if not os.path.isdir(rootp) and len(rootp) > 0:
@@ -391,7 +395,7 @@ if __name__ == '__main__':
         print("TEMP is not defined as an environment variable")
         logfile = None
     else:
-        logfile = temp + '\\' + logfile
+        logfile = temp + "\\PyBackup.log.txt"
         try:
             os.remove(logfile)
         except:
