@@ -13,6 +13,7 @@ import glob, os, sys, time, zlib
 from shutil import copyfile
 from crc32 import crc32
 
+ini_filename = "backup.ini"
 crc_filename = "crc.csv"        # the control file found in every folder
 logfile = "PyBackup.log.txt"    # opened in the %TEMP% folder
 
@@ -58,19 +59,23 @@ def display_counter(log, count, msg):
     """ Display a errors in a consistent way. """
     if count == 1:
         print("1 {}.".format(msg))
-        log.write("1 {}.\n".format(msg))
+        if log != None: log.write("1 {}.\n".format(msg))
     elif count > 1:
-        print("{} {}s.".format(count, msg))
-        log.write("{} {}s.\n".format(count, msg))
+        print("{:,} {}s.".format(count, msg))
+        if log != None: log.write("{} {}s.\n".format(count, msg))
 
 def display_summary(operation, start):
     """ Display a total operational statistics in a consistent way. """
     global folders, found, copied, hashes, corrupted, crc_missing
     global crc_broken, copy_broken, new_dest, deleted_fn
     global logfile
-    log = open(logfile, 'a')
+
+    if logfile != None:
+        log = open(logfile, 'a')
+    else:
+        log = None
     print("\n{} complete.".format(operation))
-    log.write("\n{} complete.\n".format(operation))
+    if logfile != None: log.write("\n{} complete.\n".format(operation))
     display_counter(log, folders, "folder")
     display_counter(log, found, "file")
     display_counter(log, copied, "copied file")
@@ -82,8 +87,9 @@ def display_summary(operation, start):
     display_counter(log, new_dest, "unexpected new/modified backup file")
     display_counter(log, deleted_fn, "deleted file")
     print("Completed in {}".format(timespent(start)))
-    log.write("Completed in {}\n".format(timespent(start)))
-    log.close()
+    if logfile != None:
+        log.write("Completed in {}\n".format(timespent(start)))
+        log.close()
 
 def display_update(reset=False):
     """ displays a running count of things when a lot of time has gone by with nothing else printed """
@@ -93,7 +99,7 @@ def display_update(reset=False):
     else:
         test = time.time()
         if (test - now) > 5:  # Seconds between updates
-            print("{} found".format(found), end='\r')
+            print("{:,} found".format(found), end='\r')
             now = test
 
 def ReadCrcs(pn):
@@ -170,7 +176,7 @@ def nickname(source):
         return source[0:32] + "[...]" + source[-38:]
     return source
 
-def verify(source):
+def verify(source, update=False):
     """ check crc values for one folder """
     global crc_filename, found, folders, hashes
     global corrupted, crc_missing, crc_broken, copy_broken, deleted_fn
@@ -186,7 +192,14 @@ def verify(source):
     else:
         missing = False
 
-        # Prune out the crc values for any files that no longer exist
+    print("V: {}: {} folders, {} hashed, {} errors".format(\
+        nickname(source), folders, hashes, \
+        corrupted+crc_missing+crc_broken+copy_broken))
+    display_update(True)
+    folders = folders + 1
+
+    # Prune out the crc values for any files that no longer exist
+    if not missing:
         rootp, fn = os.path.split(source)
         for fn in dict(source_crcs).keys():
             pn = source + '\\' + fn
@@ -194,12 +207,6 @@ def verify(source):
                 logerror("has been deleted", pn)
                 deleted_fn = deleted_fn + 1
                 source_crcs.pop(fn)
-
-    print("V: {}: {} folders, {} hashed, {} errors".format(\
-        nickname(source), folders, hashes, \
-        corrupted+crc_missing+crc_broken+copy_broken))
-    display_update(True)
-    folders = folders + 1
 
     # Recursively search the source folder
     for pn in glob.glob(glob.escape(source) + '\\*'):
@@ -211,8 +218,15 @@ def verify(source):
                 found = found + 1
                 display_update()
                 rootp, fn = os.path.split(pn)
+                if update and fn in source_crcs \
+                    and source_modified != None \
+                    and os.path.getmtime(pn) <= source_modified:
+                    continue;   # -u: skip old files
                 try:
+                    print("{}: checking".format(nickname(pn)))
+                    display_update()
                     crc = crc32(pn)
+                    hashes = hashes + 1
                     if not missing:
                         if fn not in source_crcs:
                             logerror("missing CRC", pn)
@@ -227,7 +241,7 @@ def verify(source):
 
         elif os.path.isdir(pn):
             # For every subfolder
-            verify(pn)
+            verify(pn, update)
 
     # Finish off by replacing CRC files
     WriteCrcs(source, source_crcs)
@@ -343,6 +357,20 @@ def main(source, dest):
     WriteCrcs(source, source_crcs)
     WriteCrcs(dest, dest_crcs)
 
+def help():
+    """ display command line help and exit """
+    print(  "\nPyBackup can be used several ways"
+            "\n1) no parameters\t-- backup folders using ~\\backup.ini"
+            "\n2) souce dest\t\t-- backup one folder"
+            "\n3) -u [folders]\t\t-- update recorded crcs in a list of folders"
+            "\n4) -v [folders]\t\t-- validate current crcs in a list of folders")
+    print("\nValidation details:")
+    print("A crc file is counted as corrupted when an exception occurs while reading or writing a control file.")
+    print("A crc is counted as missing once for each control file or once for each data file.")
+    print("A crc/file error is counted when an crc exception occurs or the wrong crc is computed.")
+    print("Whenever possible the crc control file will be updated to match the current data.")
+    exit()
+
 ##############################################################################
 if __name__ == '__main__':
     """ There are three ways to use this program.
@@ -369,67 +397,62 @@ if __name__ == '__main__':
         except:
             pass
 
-    # First look for the new -? switch
-    # PyBackup -?
-    if len(sys.argv) >= 2 and sys.argv[1] == "-?":
-        print(  "\nPyBackup can be used three ways"
-                "\n1) no parameters\t-- backup folders using ~\\backup.ini"
-                "\n2) souce dest\t\t-- backup one folder"
-                "\n3) -v [folders]\t\t-- check crcs in a list of folders")
-        print("\nValidation details:")
-        print("A crc file is counted as corrupted when an exception occurs while reading or writing a control file.")
-        print("A crc is counted as missing once for each control file or once for each data file.")
-        print("A crc/file error is counted when an crc exception occurs or the wrong crc is computed.")
-        print("Whenever possible the crc control file will be updated to match the current data.")
-        exit()
+    # First look for command line switches
+    if len(sys.argv) >= 2 and sys.argv[1][0] in ['-', '/']:
 
-    # Next look for the new -v switch, used to check CRCs for each folder listed
-    # PyBackup -v [folders]
-    if len(sys.argv) >= 2 and sys.argv[1] == "-v":
-        for pn in sys.argv[2:]:
-            verify(pn)
-        display_summary("Verify", start)
+        # PyBackup -v [folders]
+        # Verify CRCs for each folder listed
+        if sys.argv[1][1] in ['u', 'U', 'v', 'V']:
+            for pn in sys.argv[2:]:
+                verify(pn, sys.argv[1][1] in ['u', 'U'])
+            display_summary("Verify", start)
+            exit()  # The rest below is specific to backup operations
 
-        # The rest below is specific to backup operations
-        exit()
+        # Anything else is either a request for help or shows a need for it.
+        # PyBackup -?
+        help()
 
     # If a source and destination is specified on the command line, backup one folder
     # PyBackup source destination
     if len(sys.argv) == 3:
         """ Backup one folder """
         main(sys.argv[1], sys.argv[2])
+        display_summary("Backup", start)
+        exit()
 
-    if len(sys.argv) == 1:
-        """ No command line parameters were provided.
-            Use an ini file that identifies source and destination folders.
-            Copy all files in the source that do not exist in the destination.
-            Skip all files with matching CRCs in both locations.
-            Create a batch file that will copy newer files over older files,
-            but do not run that batch file.
-            Advanced ideas:
-                1. In the same folder as a file, save the CRC values for each file.
-                2. Use those values any time the CRC file is newer than the file.
-        """
+    elif len(sys.argv) != 1:
+        help()
 
-        # Switch to the %USERPROFILE% folder where Backup.ini should reside.
-        userprofile = os.environ.get('USERPROFILE')
-        if userprofile is None:
-            print("USERPROFILE is not defined as an environment variable")
-            exit()
+    """ No command line parameters were provided.
+        Use an ini file that identifies source and destination folders.
+        Copy all files in the source that do not exist in the destination.
+        Skip all files with matching CRCs in both locations.
+        Create a batch file that will copy newer files over older files,
+        but do not run that batch file.
+        Advanced ideas:
+            1. In the same folder as a file, save the CRC values for each file.
+            2. Use those values any time the CRC file is newer than the file.
+    """
 
-        try:
-            os.chdir(userprofile)
-            f = open("Backup.ini")
-        except:
-            print("{}\Backup.ini not found")
-            exit()
+    # Switch to the %USERPROFILE% folder where Backup.ini should reside.
+    userprofile = os.environ.get('USERPROFILE')
+    if userprofile is None:
+        print("USERPROFILE is not defined as an environment variable")
+        exit()
 
-        for line in f:
-            if line[0] != '#':
-                if line[-1] == '\n':
-                    line = line[:-1]
-                source, dest = line.split(',')
-                main(source, dest)
-        f.close()
+    try:
+        os.chdir(userprofile)
+        f = open(ini_filename)
+    except:
+        print("{} not found", ini_filename)
+        exit()
 
+    # Allow exceptions for the rest
+    for line in f:
+        if line[0] != '#':
+            if line[-1] == '\n':
+                line = line[:-1]
+            source, dest = line.split(',')
+            main(source, dest)
+    f.close()
     display_summary("Backup", start)

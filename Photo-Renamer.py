@@ -187,7 +187,7 @@ if __name__ == '__main__':
     use_modified_date = False   # -m: reset the date based upon the file date
 
     for arg in sys.argv[1:]:
-        if arg[0] == '-':
+        if arg[0] in ['-', '/']:
             if arg[1].lower() == 's':
                 strip = True
             elif arg[1].lower() == 'f':
