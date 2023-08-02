@@ -1,6 +1,9 @@
 @echo off
 Rem Back up to an existing folder on a network drive.
 Rem Prerequisite: run step3
+SetLocal
+set Rem=Rem 
+if "%1"=="" set Rem=
 
 Rem The next lines delete files and folders created when this step is performed.
 if exist %temp%\pybackup.step4.log.txt del %temp%\pybackup.step4.log.txt
@@ -15,10 +18,9 @@ pybackup %temp%\pybackup\step3 z:\pybackup\step4
 ren %temp%\pybackup.log.txt pybackup.step4.log.txt
 
 Rem See how the destination folder compares with the source.
-"C:\Program Files\WinDiff\windiff.exe" %temp%\pybackup\step3 z:\pybackup\step4
+%Rem% "C:\Program Files\WinDiff\windiff.exe" %temp%\pybackup\step3 z:\pybackup\step4
 
 Rem Review the errors that occurred
 attrib %temp%\pybackup\step3\*.* /s>>%temp%\pybackup.step4.log.txt
 attrib z:\pybackup\step4\*.* /s>>%temp%\pybackup.step4.log.txt
-%temp%\pybackup.step4.log.txt
-
+%Rem% %temp%\pybackup.step4.log.txt

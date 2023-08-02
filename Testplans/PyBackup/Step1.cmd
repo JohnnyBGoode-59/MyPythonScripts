@@ -3,6 +3,8 @@
 @Rem Prerequisites: The folders used in this step must not be system protected.
 @Rem PyBackup %test%\pybackup\step1 %test%\pybackup\step0
 SetLocal
+set Rem=Rem 
+if "%1"=="" set Rem=
 
 Rem The next lines deletes all files and folders created during the test suite.
 cd %temp%
@@ -60,10 +62,10 @@ ren %temp%\pybackup.log.txt pybackup.step1.log.txt
 @Echo.
 
 @Rem Compare the two new folders.
-"C:\Program Files\WinDiff\windiff.exe" %temp%\pybackup\step1 %temp%\pybackup\step0 
+%Rem% "C:\Program Files\WinDiff\windiff.exe" %temp%\pybackup\step1 %temp%\pybackup\step0 
 
 @Rem Review the logfile for this step
 attrib %temp%\pybackup\*.* /s >>%temp%\pybackup.step1.log.txt
-%temp%\pybackup.step1.log.txt
+%Rem% %temp%\pybackup.step1.log.txt
 endlocal
 @exit /b

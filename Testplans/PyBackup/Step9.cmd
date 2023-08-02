@@ -1,7 +1,9 @@
 @echo on
 @Rem Perform a backup operation with hard errors present, both source and destination
 @Rem Prerequisite: run step7
-@SetLocal
+SetLocal
+set Rem=Rem 
+if "%1"=="" set Rem=
 
 Rem The next lines delete files and folders that are no longer required
 if exist %temp%\pybackup.step9.log.txt del %temp%\pybackup.step9.log.txt
@@ -38,4 +40,4 @@ icacls step9\Inaccessible\*.* /inheritance:e /q
 Rem Review the errors that occurred
 cd %temp%\pybackup
 attrib *.* /s>>%temp%\pybackup.step9.log.txt
-%temp%\pybackup.step9.log.txt
+%Rem% %temp%\pybackup.step9.log.txt

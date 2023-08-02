@@ -1,13 +1,15 @@
 @echo off
 @Rem Perform a verify operation with hard errors present
 @Rem Prerequisite: run step7
-@SetLocal
+SetLocal
+set Rem=Rem 
+if "%1"=="" set Rem=
 
 Rem The next lines delete files and folders that are no longer required
 if exist %temp%\pybackup.step8.log.txt del %temp%\pybackup.step8.log.txt
 
 SetLocal
-@Rem Modify rename step5 to step7 and then protectsome files
+@Rem Modify rename step5 to step7 and then protect some files
 cd %temp%\pybackup
 if not exist step8 ren step7 step8
 cd step8
@@ -34,4 +36,4 @@ cd ..
 
 Rem Review the errors that occurred
 attrib *.* /s>>%temp%\pybackup.step8.log.txt
-%temp%\pybackup.step8.log.txt
+%Rem% %temp%\pybackup.step8.log.txt

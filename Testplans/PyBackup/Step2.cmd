@@ -1,6 +1,8 @@
 @echo off
 @Rem Back up a folder with issues to an existing, very similar folder.
-@SetLocal
+SetLocal
+set Rem=Rem 
+if "%1"=="" set Rem=
 
 @Rem The next lines delete files and folders created when this step is performed.
 cd %temp%
@@ -33,7 +35,7 @@ echo Step2: This is a new destination file that will be be ignored>ignored.txt
 del deleted.txt
 
 Rem Review the differences between Step0 and Step2 before backing up Step0
-"C:\Program Files\WinDiff\windiff.exe" %temp%\pybackup\step0 %temp%\pybackup\step2
+%Rem% "C:\Program Files\WinDiff\windiff.exe" %temp%\pybackup\step0 %temp%\pybackup\step2
 
 @Rem Backup step0 to step2
 cd %temp%\pybackup
@@ -44,9 +46,9 @@ ren %temp%\pybackup.log.txt pybackup.step2.log.txt
 @Echo.
 
 Rem See how the destination folder compares with the source.
-"C:\Program Files\WinDiff\windiff.exe" %temp%\pybackup\step0 %temp%\pybackup\step2
+%Rem% "C:\Program Files\WinDiff\windiff.exe" %temp%\pybackup\step0 %temp%\pybackup\step2
 
 Rem Review the errors that occurred
 attrib %temp%\pybackup\*.* /s >>%temp%\pybackup.step2.log.txt
-%temp%\pybackup.step2.log.txt
+%Rem% %temp%\pybackup.step2.log.txt
 @exit /b

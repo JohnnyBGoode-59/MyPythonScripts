@@ -1,7 +1,9 @@
 @echo off
 @Rem Validate the new backup folder.
 @Rem Prerequisite: run step2
-@SetLocal
+SetLocal
+set Rem=Rem 
+if "%1"=="" set Rem=
 
 @Rem The next lines delete files and folders created when this step is performed.
 cd %temp%
@@ -15,4 +17,4 @@ attrib -a step3\*.* /s
 pybackup -v step3
 @ren %temp%\pybackup.log.txt pybackup.step3.log.txt
 attrib step3\*.* /s >>%temp%\pybackup.step3.log.txt
-%temp%\pybackup.step3.log.txt
+%Rem% %temp%\pybackup.step3.log.txt

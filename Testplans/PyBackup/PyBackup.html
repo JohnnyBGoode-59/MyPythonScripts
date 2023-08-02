@@ -7,7 +7,7 @@
 	<META NAME="AUTHOR" CONTENT="John Eichenberger">
 	<META NAME="CREATED" CONTENT="20230729;6215387">
 	<META NAME="CHANGEDBY" CONTENT="John Eichenberger">
-	<META NAME="CHANGED" CONTENT="20230801;11585820">
+	<META NAME="CHANGED" CONTENT="20230802;12171424">
 	<STYLE TYPE="text/css">
 	<!--
 		@page { margin: 0.79in }
@@ -42,6 +42,12 @@ will be created and modified in three key locations:</P>
 	network drive in which the <A HREF="/Z:/PyBackup">Z:\PyBackup</A>
 	subfolder will contain additional data sets.</P>
 </OL>
+<P STYLE="font-weight: normal">Each step creates a log file. The
+<B>Cleanup</B> batch file copies those files to a separate repository
+where they can be checked to ensure that the results match what is
+currently expected of them. Each step can be run with or without
+using <B>Windiff</B>. <B>EveryTest</B> runs every test in order with
+no operator interaction required.</P>
 <H1 CLASS="western"><B>Step 1: </B>Create the initial set of test
 data and back it up</H1>
 <P>This step creates a folder named Step1 that initially contains no
@@ -51,18 +57,9 @@ initial setup.</P>
 brackets in the folder name. So a test for that was added to this
 step. This also creates path names that get abbreviated, which is
 nice to see.</P>
-<H2 CLASS="western">Step 1 results, part 1: Windiff Step0 Step1</H2>
+<H2 CLASS="western">Windiff Step0 Step1</H2>
 <P STYLE="font-weight: normal">There are no differences between the
 two folders.</P>
-<H2 CLASS="western">Step 1 results, part 2: pybackup.step1.log.txt</H2>
-<P STYLE="font-weight: normal">Backup complete.<BR>5 folders.<BR>12
-files.<BR>24 hashed files.</P>
-<P STYLE="font-weight: normal">Note: each of the files is hashed
-twice, once in the Step1 and once in the Step0.</P>
-<P STYLE="font-weight: normal">The step0 files are all listed as
-modified with no hidden, system, or read-only attributes.<BR>The
-step1 files are listed as unmodified except for crc files and
-attributes.txt.</P>
 <H1 CLASS="western"><B>Step 2: Backup a folder to an similar existing
 backup with common issues in both</B></H1>
 <P><SPAN STYLE="font-weight: normal">This step starts with </SPAN><B>Step0
@@ -71,8 +68,7 @@ special attributes in that location. It modifies a few things and
 copies it to </SPAN><B>Step2</B><SPAN STYLE="font-weight: normal">
 before making more modifications there. Then it backs up </SPAN><B>Step0</B><SPAN STYLE="font-weight: normal">
 to </SPAN><B>Step1</B><SPAN STYLE="font-weight: normal">.</SPAN></P>
-<H2 CLASS="western">Step 2 results, part 1: Windiff step0 step2
-(before the backup)</H2>
+<H2 CLASS="western">Windiff step0 step2 (before the backup)</H2>
 <P>Review what makes these two folders different before performing a
 backup.</P>
 <P STYLE="font-weight: normal">changed.txt			a pre-existing file that
@@ -87,26 +83,17 @@ the backup but do not show up as
 differences:<BR>corruptcrc\crc.csv		corrupted in
 Step1<BR>nocrcs\readme.txt		created <SPAN STYLE="background: transparent">in
 Step1</SPAN></P>
-<H2 CLASS="western">Step 2 results, part 1: Windiff step0 step2
-(after the backup)</H2>
+<H2 CLASS="western">Windiff step0 step2 (after the backup)</H2>
 <P STYLE="font-weight: normal">crcs.csv			<B>obsolete.txt
 </B>removed<BR>ignored.txt			a new file only in the
 destination<BR>obsolete.txt			a file deleted from the source, now
 residing only in the destination</P>
 <P STYLE="font-weight: normal">Since the ignored file was never
 backed up, it never was added to a crc file.</P>
-<P STYLE="font-weight: normal">The obsolete file was removed from the
-<B>Step0</B> crc file. That file still exists in the destination, so
-it makes sense to be in the crc file there.</P>
-<H2 CLASS="western">Step 2 results, part 3: pybackup.step2.log.txt</H2>
-<P>step2\deleted.txt: has been deleted<BR>step2\changed.txt: has
-changed<BR>step0\CorruptCRC\crc.csv: corrupt file
-removed<BR>step2\CorruptCRC\crc.csv: corrupt file
-removed<BR>step2\CorruptCRC\ReadMe.txt: is new<BR>step2\new.txt: is
-new<BR>step2\NoCRC\ReadMe.txt: is new</P>
-<P>Backup complete.<BR>6 folders.<BR>13 files.<BR>3 copied files.<BR>11
-hashed files.<BR>2 corrupted crc files.<BR>4 unexpected new/modified
-backup files.<BR>1 deleted file.</P>
+<P><SPAN STYLE="font-weight: normal">The obsolete file was removed
+from the </SPAN><B>Step0</B><SPAN STYLE="font-weight: normal"> crc
+file. That file still exists in the destination, so it makes sense to
+be in the crc file there.</SPAN></P>
 <H1 CLASS="western"><B>Step 3: Verify the backup performed in step 2</B></H1>
 <P STYLE="font-weight: normal">Run <B>Step3.PyBackup.cmd </B>to
 perform a verify and check the results.</P>
@@ -118,37 +105,23 @@ recorded CRC.</P>
 <H1 CLASS="western"><B>Step 4: Backup files to a new network folder</B></H1>
 <P STYLE="font-weight: normal">This backs up step 3 data to a network
 drive.</P>
-<H2 CLASS="western">Step 4 results, part 1: Windiff step3 step4</H2>
+<H2 CLASS="western">Windiff step3 step4</H2>
 <P STYLE="font-weight: normal">No differences.</P>
-<H2 CLASS="western">Step 4 results, part 2: pybackup.step4.log.txt</H2>
-<P STYLE="font-weight: normal">Backup complete.<BR>6 folders.<BR>15
-files.<BR>15 copied files.<BR>15 hashed files.</P>
 <H1 CLASS="western"><B>Step 5: Backup files with no changes to an
 existing network folder</B></H1>
 <P STYLE="font-weight: normal">This backs up step 4 data from a
 network drive to a temp folder. However, the destination folder
 already has the same data so no files are actually copied.</P>
-<H2 CLASS="western">Step 5 results, part 1: Windiff step4 step5</H2>
+<H2 CLASS="western">Windiff step4 step5</H2>
 <P STYLE="font-weight: normal">No differences.</P>
-<H2 CLASS="western">Step 5 results, part 2: pybackup.step5.log.txt</H2>
-<P STYLE="font-weight: normal">Backup complete.<BR>6 folders.<BR>15
-files.</P>
-<P STYLE="font-weight: normal">Note: the network based files still
-have the archive attribute set on them.</P>
 <H1 CLASS="western"><B>Step 6: Force errors reading/writing source
 files</B></H1>
 <P>In this step the <B>Inaccessible </B><SPAN STYLE="font-weight: normal">files
 are made unreadable before backing up data.</SPAN></P>
-<H2 CLASS="western">Step 6 results, part 1: Windiff step5 step6</H2>
+<H2 CLASS="western">Windiff step5 step6</H2>
 <P STYLE="font-weight: normal">inaccessible\crc.csv		acl.txt is new,
 ReadMe.txt is removed<BR>inaccessible\readme.txt		only exists in
 step5</P>
-<H2 CLASS="western">Step 6 results, part 2: pybackup.step6.log.txt</H2>
-<P STYLE="font-weight: normal">step5\Inaccessible\ReadMe.txt: failed
-to compute CRC<BR>step5\Inaccessible\crc.csv: could not be created</P>
-<P STYLE="font-weight: normal">Backup complete.<BR>6 folders.<BR>16
-files.<BR>15 copied files.<BR>16 hashed files.<BR>1 compute crc
-error.<BR>1 failure to copy or create error.</P>
 <H1 CLASS="western"><B>Step 7: Fail access data and/or crc source
 files</B></H1>
 <P><SPAN STYLE="font-weight: normal">In this step </SPAN><B>Step5</B><SPAN STYLE="font-weight: normal">
@@ -156,40 +129,17 @@ is renamed </SPAN><B>Step7,</B><SPAN STYLE="font-weight: normal"> the
 </SPAN><B>Inaccessible </B><SPAN STYLE="font-weight: normal">files
 within that folder are made unreadable/writable, and then </SPAN><B>Step6</B><SPAN STYLE="font-weight: normal">
 is backed up to </SPAN><B>Step7</B><SPAN STYLE="font-weight: normal">.</SPAN></P>
-<H2 CLASS="western">Step 7 results, part 1: Windiff step6 step7</H2>
+<H2 CLASS="western">Windiff step6 step7</H2>
 <P STYLE="font-weight: normal">inaccessible\crc.csv		the step7 copy
 is out of date and does not include <B>acl.txt </B>or the correct
 <B>readme.txt</B><BR>inaccessible\readme.txt		the step7 copy is out
 of date</P>
-<H2 CLASS="western">Step 7 results, part 2: pybackup.step7.log.txt</H2>
-<P STYLE="font-weight: normal">step7\Inaccessible\acl.txt: is
-new<BR>step7\Inaccessible\acl.txt: failed to compute
-CRC<BR>copyfile(step6\Inaccessible\acl.txt,step7\Inaccessible\acl.txt):
-failed<BR>step7\Inaccessible\ReadMe.txt: is
-new<BR>step7\Inaccessible\ReadMe.txt: failed to compute
-CRC<BR>copyfile(step6\Inaccessible\ReadMe.txt,step7\Inaccessible\ReadMe.txt):
-failed<BR>step7\Inaccessible\crc.csv: could not be created</P>
-<P STYLE="font-weight: normal">Backup complete.<BR>6 folders.<BR>16
-files.<BR>1 hashed file.<BR>2 compute crc errors.<BR>3 failure to
-copy or create errors.<BR>2 unexpected new/modified backup files.</P>
 <H1 CLASS="western"><B>Step 8: Encounter hard errors while validating</B></H1>
 <P><SPAN STYLE="font-weight: normal">In this step </SPAN><B>Step7</B><SPAN STYLE="font-weight: normal">
 is renamed </SPAN><B>Step8</B><SPAN STYLE="font-weight: normal">, and
 the </SPAN><B>Inaccessible </B><SPAN STYLE="font-weight: normal">files
 within that folder are made unreadable/writable before validating
 those changes.</SPAN></P>
-<H2 CLASS="western">Step 8 results, part 1: pybackup.step8.log.txt</H2>
-<P STYLE="font-weight: normal">step8\deleted.txt: has been
-deleted<BR>step8\changed.txt: mismatched
-CRC<BR>step8\CorruptCRC\crc.csv: corrupt file
-removed<BR>step8\CorruptCRC: missing CRC file<BR>step8\Inaccessible:
-missing CRC file<BR>step8\Inaccessible\acl.txt: failed to compute
-CRC<BR>step8\Inaccessible\ReadMe.txt: failed to compute
-CRC<BR>step8\Inaccessible\crc.csv: could not be created<BR>step8\NoCRC:
-missing CRC file<BR>step8\verifyme.txt: missing CRC</P>
-<P STYLE="font-weight: normal">Verify complete.<BR>6 folders.<BR>16
-files.<BR>1 corrupted crc file.<BR>4 missing crcs.<BR>3 compute crc
-errors.<BR>1 failure to copy or create error.<BR>1 deleted file.</P>
 <H1 CLASS="western"><B>Step 9: Encounter hard errors while backing up</B></H1>
 <P><SPAN STYLE="font-weight: normal">In this step </SPAN><B>Step6</B><SPAN STYLE="font-weight: normal">
 is renamed </SPAN><B>Step9</B><SPAN STYLE="font-weight: normal">,</SPAN><B>
@@ -209,7 +159,11 @@ failed</P>
 files.<BR>3 copied files.<BR>6 hashed files.<BR>2 compute crc
 errors.<BR>1 failure to copy or create error.<BR>1 unexpected
 new/modified backup file.</P>
-<P STYLE="font-weight: normal"><BR><BR>
+<H1 CLASS="western"><B>Step 10: Perform an update operation</B></H1>
+<P><SPAN STYLE="font-weight: normal">The difference between verify
+and update is that update trusts existing CRC values so long as the
+data file is not newer than the CRC file.</SPAN></P>
+<P><BR><BR>
 </P>
 </BODY>
 </HTML>
