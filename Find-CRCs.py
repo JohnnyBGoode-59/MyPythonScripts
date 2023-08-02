@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Name: duplicate-crcs
+# Name: Find-CRCs
 # Purpose: Find matching crc files across many crc files.
 #   This program can be used to find and remove duplicate files.
 #
@@ -29,7 +29,7 @@ def nickname(source):
 def log(original, duplicate):
     """ Log severe errors """
     global logfile, cleanscript, duplicates
-    if original == duplicate:
+    if os.path.abspath(original) == os.path.abspath(duplicate):
         return
     print("{} == {}".format(nickname(duplicate), nickname(original)))
 
@@ -95,6 +95,10 @@ def help():
     print("\n-r\tReloads a saved set of CRC files from a master file")
     print("\n-w\t(Re)Creates a master file")
     print("\nEvery other parameter should be that of a folder containing crc.csv files.")
+    print("\n\n*** WARNING ***")
+    print("Pathnames saved with -w may be relative.")
+    print("Do not directories and continue to saved data.")
+    print("Conversely to purposely use relative folder names use a dot prefix.")
 
 def main(pn):
     """ Combine all crcs together for a directory tree in order to find duplicates """
@@ -154,3 +158,5 @@ if __name__ == '__main__':
         print("\n\n")
         with open(cleanscript) as fh:
             print(fh.read())
+
+        print("\n{} Duplicates found.\nremove-duplicates ?".format(duplicates))
