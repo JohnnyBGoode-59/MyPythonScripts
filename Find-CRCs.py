@@ -10,15 +10,15 @@
 # Licence:     GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
 #-------------------------------------------------------------------------------
 
-import glob, os, sys, zlib
+import glob, os, re, sys, zlib
 import json
 
 crc_filename = "crc.csv"
-logfile = "duplicates.csv"
 jsonfile = "duplicate-crcs.json" # for -r and -w
 cleanscript = "remove-duplicates.cmd"
 crcs = {}
 duplicates = 0
+order_switched = False
 
 def nickname(source):
     """ Shorten really long names when all I really need is the basics. """
@@ -27,24 +27,29 @@ def nickname(source):
     return source
 
 def log(original, duplicate):
-    """ Log severe errors """
-    global logfile, cleanscript, duplicates
+    """ Log and record a script that can be used to remove duplicate files. """
+    global cleanscript, duplicates, switch_order
+
+    # Ignore calls with the exact same pathname for both parameters
     if os.path.abspath(original) == os.path.abspath(duplicate):
         return
-    print("{} == {}".format(nickname(duplicate), nickname(original)))
 
-    log = open(logfile, 'a')
-    if duplicates == 0:
-        log.write('Original,Duplicate\n')
-    log.write('"{}","{}"\n'.format(original, duplicate))
-    log.close()
-
+    # Create a command file that will remove all duplicate files
+    # But provide comments in that file in case the original files should be removed instead.
     log = open(cleanscript, 'a')
     if duplicates == 0:
         log.write("Rem {} removes duplicate files\n".format(cleanscript))
-    log.write('del "{}"\n'.format(duplicate))
+        log.write("Pick which files to remove.\n")
+    # Sometimes the copies are really the ones to keep.
+    if order_switched:
+        log.write('del "{}"\n'.format(original))
+        log.write('Rem "{}"\n'.format(duplicate))
+    else:
+        log.write('del "{}"\n'.format(duplicate))
+        log.write('Rem "{}"\n'.format(original))
     log.close()
 
+    print("{} == {}".format(nickname(duplicate), nickname(original)))
     duplicates = duplicates + 1
 
 def AddCrcs(filename):
@@ -57,13 +62,13 @@ def AddCrcs(filename):
 
     rootp, crcfn = os.path.split(filename)
     for line in f:
-        if line[-1] == '\n':
-            line = line[:-1]
-        list = line.split(',')  # careful, some names have commas
-        crc = list[0]
-        pn = rootp + '\\' + list[1] # pn is the new pathname
-        for more in list[2:]:   # this should fix those names
-            pn += ','+more
+        # First match a quoted pathname, if possible
+        m = re.match('([0-9A-F]{8}),"(.*?)"', line)
+        # If that fails, match a pathname with no quotes
+        if m == None:
+            m = re.match('([0-9A-F]{8}),(.*)', line)
+        crc = m.group(1)
+        pn = m.group(2)
         if crc in crcs:
             log(crcs[crc], pn)
         else:
@@ -92,8 +97,9 @@ def WriteJson(data, filename):
 
 def help():
     print("duplicate-crcs -r [folders] -w\n")
-    print("\n-r\tReloads a saved set of CRC files from a master file")
-    print("\n-w\t(Re)Creates a master file")
+    print("\n-r\tReloads a saved set of CRC files from a master json file")
+    print("\n-s\tSometimes the copies are really the ones to keep.")
+    print("\n-w\t(Re)Creates that master json file")
     print("\nEvery other parameter should be that of a folder containing crc.csv files.")
     print("\n\n*** WARNING ***")
     print("Pathnames saved with -w may be relative.")
@@ -101,7 +107,7 @@ def help():
     print("Conversely to purposely use relative folder names use a dot prefix.")
 
 def main(pn):
-    """ Combine all crcs together for a directory tree in order to find duplicates """
+    """ Combine all crcs together in order to find duplicates. """
     global found
 
     print("Adding from {}".format(nickname(pn)))
@@ -125,9 +131,8 @@ def Init(rootp, fn, clean=True):
     return pn
 
 if __name__ == '__main__':
-    # (Re)Create a logfile used to record duplicates
+    # (Re)Create the pathnames (and files) used by this programe
     temp = os.environ.get('TEMP')
-    logfile = Init(temp, logfile)
     cleanscript = Init(temp, cleanscript)
     jsonfile = Init(temp, jsonfile, False)  # Not erased but not read unless requested
     processed = []
@@ -141,6 +146,8 @@ if __name__ == '__main__':
                 crcs = ReadJson(jsonfile)
             elif arg in ['-w', '-W', '/w', '/W']:
                 WriteJson(crcs, jsonfile)
+            elif arg in ['-s', '-S']:
+                order_switched = True
             elif os.path.isdir(arg):
                 main(arg)
                 processed += [arg]
@@ -149,6 +156,7 @@ if __name__ == '__main__':
         print("No duplicates found")
     else:
         # Add an all important command at the end of the cleanscript
+        # It will update the crc files for the effected folders.
         with open(cleanscript, 'a') as fh:
             fh.write("PyBackup -u ")
             for folder in processed:
