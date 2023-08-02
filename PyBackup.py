@@ -192,8 +192,8 @@ def verify(source, update=False):
     else:
         missing = False
 
-    print("V: {}: {} folders, {} hashed, {} errors".format(\
-        nickname(source), folders, hashes, \
+    print("{}: {}: {} folders, {} hashed, {} errors".format(\
+        'U' if update else 'V', nickname(source), folders, hashes, \
         corrupted+crc_missing+crc_broken+copy_broken))
     display_update(True)
     folders = folders + 1

@@ -11,9 +11,11 @@
 #-------------------------------------------------------------------------------
 
 import glob, os, sys, zlib
+import json
 
 crc_filename = "crc.csv"
 logfile = "duplicates.csv"
+jsonfile = "duplicate-crcs.json" # for -r and -w
 cleanscript = "remove-duplicates.cmd"
 crcs = {}
 duplicates = 0
@@ -39,7 +41,7 @@ def log(original, duplicate):
 
     log = open(cleanscript, 'a')
     if duplicates == 0:
-        log.write('Rem Remove Duplicate files\n')
+        log.write("Rem {} removes duplicate files\n".format(cleanscript))
     log.write('del "{}"\n'.format(duplicate))
     log.close()
 
@@ -68,11 +70,37 @@ def AddCrcs(filename):
             crcs[crc] = pn
     f.close()
 
+def ReadJson(filename):
+    """ Read a dictionary from a json file or return an empty dictionary """
+    try:
+        print("Resetting from:", filename)
+        with open(filename) as jf:
+            data = json.load(jf)
+        return json.loads(data)
+    except:
+        return {}
+
+def WriteJson(data, filename):
+    """ Write a dictionary to a json file """
+    try:
+        print("Saving to:", filename)
+        with open(filename, 'w') as fh:
+            js = json.dumps(data)
+            json.dump(js, fh)
+    except:
+        pass
+
+def help():
+    print("duplicate-crcs -r [folders] -w\n")
+    print("\n-r\tReloads a saved set of CRC files from a master file")
+    print("\n-w\t(Re)Creates a master file")
+    print("\nEvery other parameter should be that of a folder containing crc.csv files.")
+
 def main(pn):
     """ Combine all crcs together for a directory tree in order to find duplicates """
     global found
 
-    print("Processing {}".format(nickname(pn)))
+    print("Adding from {}".format(nickname(pn)))
     for pn in glob.glob(glob.escape(pn)+'/*'):
         rootp, fn = os.path.split(pn)
         if fn == crc_filename:
@@ -80,23 +108,49 @@ def main(pn):
         elif os.path.isdir(pn):
             main(pn)
 
+def Init(rootp, fn, clean=True):
+    if rootp is None:
+        print("No root path to initialize output files. TEMP not defined?")
+        exit()
+    pn = rootp + '\\' + fn
+    try:
+        if clean:
+            os.remove(pn)
+    except:
+        pass
+    return pn
+
 if __name__ == '__main__':
     # (Re)Create a logfile used to record duplicates
     temp = os.environ.get('TEMP')
-    if temp is None:
-        print("TEMP is not defined as an environment variable")
-        exit()
-    logfile = temp + '\\' + logfile
-    cleanscript  = temp + '\\' + cleanscript
-    try:
-        os.remove(logfile)
-    except:
-        pass
+    logfile = Init(temp, logfile)
+    cleanscript = Init(temp, cleanscript)
+    jsonfile = Init(temp, jsonfile, False)  # Not erased but not read unless requested
+    processed = []
 
     # Combine as many folders and requested
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:
-            if os.path.isdir(arg):
+            if arg in ['-?', '/?', '-h', '-H']:
+                help()
+            elif arg in ['-r', '-R', '/r', '/R']:
+                crcs = ReadJson(jsonfile)
+            elif arg in ['-w', '-W', '/w', '/W']:
+                WriteJson(crcs, jsonfile)
+            elif os.path.isdir(arg):
                 main(arg)
+                processed += [arg]
 
-    print(duplicates, "duplicates found")
+    if not duplicates:
+        print("No duplicates found")
+    else:
+        # Add an all important command at the end of the cleanscript
+        with open(cleanscript, 'a') as fh:
+            fh.write("PyBackup -u ")
+            for folder in processed:
+                fh.write("{} ".format(folder))
+            fh.write("\n")
+            fh.close()
+        print("\n\n")
+        with open(cleanscript) as fh:
+            print(fh.read())
