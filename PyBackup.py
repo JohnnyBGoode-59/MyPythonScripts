@@ -114,7 +114,7 @@ def ReadCrcs(pn):
 
     try:
         # Every line in a CRC file is 8 hexadecimal characters, a comma
-        # and the pathname. The pathname may be quoted.
+        # and the filename. The filename may be quoted.
         for line in f:
             # First match a quoted pathname, if possible
             m = re.match('([0-9A-F]{8}),"(.*?)"', line)
@@ -122,8 +122,7 @@ def ReadCrcs(pn):
             if m == None:
                 m = re.match('([0-9A-F]{8}),(.*)', line)
             crc = m.group(1)
-            pn = m.group(2)
-            rootp, fn = os.path.split(pn)
+            fn = m.group(2)
             crcs[fn] = crc
         f.close()
         last_modified = os.path.getmtime(filename)

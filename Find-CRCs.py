@@ -69,7 +69,7 @@ def AddCrcs(filename):
         if m == None:
             m = re.match('([0-9A-F]{8}),(.*)', line)
         crc = m.group(1)
-        pn = m.group(2)
+        pn = rootp + '\\' + m.group(2)
         if crc in crcs:
             log(crcs[crc], pn)
         else:
