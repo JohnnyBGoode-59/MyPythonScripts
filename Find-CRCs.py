@@ -17,6 +17,7 @@ crc_filename = "crc.csv"
 jsonfile = "duplicate-crcs.json" # for -r and -w
 cleanscript = "remove-duplicates.cmd"
 crcs = {}
+found = 0
 duplicates = 0
 order_switched = False
 
@@ -54,7 +55,7 @@ def log(original, duplicate):
 
 def AddCrcs(filename):
     """ Add CRC values from one file """
-    global crcs, duplicates
+    global crcs, found
     try:
         f = open(filename)
     except: # open may not find the file
@@ -73,6 +74,7 @@ def AddCrcs(filename):
             log(crcs[crc], pn)
         else:
             crcs[crc] = pn
+            found = found + 1
     f.close()
 
 def ReadJson(filename):
@@ -96,15 +98,16 @@ def WriteJson(data, filename):
         pass
 
 def help():
-    print("duplicate-crcs -r [folders] -w\n")
-    print("\n-r\tReloads a saved set of CRC files from a master json file")
-    print("\n-s\tSometimes the copies are really the ones to keep.")
-    print("\n-w\t(Re)Creates that master json file")
+    print("Find-CRCs [-r] [folders] [-w]\n")
+    print("-r\tReloads a saved set of CRC files from a master json file")
+    print("-s\tSometimes the copies are really the ones to keep.")
+    print("-w\t(Re)Creates that master json file")
     print("\nEvery other parameter should be that of a folder containing crc.csv files.")
-    print("\n\n*** WARNING ***")
+    print("\n*** WARNING ***")
     print("Pathnames saved with -w may be relative.")
-    print("Do not directories and continue to saved data.")
-    print("Conversely to purposely use relative folder names use a dot prefix.")
+    print("Do not change directories and continue to use saved data.")
+    print("Conversely, to purposely use relative folder names, use a dot prefix.")
+    exit()
 
 def main(pn):
     """ Combine all crcs together in order to find duplicates. """
@@ -152,8 +155,8 @@ if __name__ == '__main__':
                 main(arg)
                 processed += [arg]
 
-    if not duplicates:
-        print("No duplicates found")
+    if duplicates == 0:
+        print("No duplicates found in {:,} files".format(found))
     else:
         # Add an all important command at the end of the cleanscript
         # It will update the crc files for the effected folders.
@@ -167,4 +170,4 @@ if __name__ == '__main__':
         with open(cleanscript) as fh:
             print(fh.read())
 
-        print("\n{} Duplicates found.\nremove-duplicates ?".format(duplicates))
+        print("\n{:,} Duplicates found.\nremove-duplicates ?".format(duplicates))

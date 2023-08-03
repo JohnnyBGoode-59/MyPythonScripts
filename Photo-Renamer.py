@@ -15,8 +15,9 @@ renamed = 0
 dated = 0
 undated = 0
 well_named = 0
-filespec = '*'
+filespec = '*'              # can be changed by the command prompt
 use_modified_date = False   # -m: reset the date based upon the file date
+picture_exts = ['.jpg', '.jpeg',  '.heic',  '.png']
 
 import glob, re, os, sys, time
 
@@ -24,20 +25,11 @@ from EXIF_Dating import GetExifDate, SetExifDate, GetFileDate
 
 def rename(pn, strip, reset, recursive):
     """ Rename one file """
-    global found, renamed, dated, undated, well_named, filespec
-    global use_modified_date
+    global found, renamed, dated, undated, well_named
+    global use_modified_date, picture_exts
 
-    # Optionally process folders recursively
+    # Just in case...
     if os.path.isdir(pn):
-        for fn in glob.glob(glob.escape(pn) + '\\' + filespec):
-            if os.path.isfile(fn):
-                rename(fn, strip, reset, recursive)
-
-        # Perform recursion with a unique filespec
-        if recursive:
-            for fn in glob.glob(glob.escape(pn) + "\\*"):
-                if os.path.isdir(fn):
-                    rename(fn, strip, reset, recursive)
         return
 
     # Define filename pattern matching first
@@ -45,8 +37,8 @@ def rename(pn, strip, reset, recursive):
     rootp, ext = os.path.splitext(pn)
     rootp, fn = os.path.split(pn)
 
-    # Avoid processing thumb.db files
-    if ext.lower() == ".db":
+    # Avoid processing some files
+    if ext.lower() in [".db", ".csv"]:
         return
     found = found + 1
 
@@ -83,19 +75,20 @@ def rename(pn, strip, reset, recursive):
 
             # but a file date is available
             # so set the EXIF date using the file date
-            try:
-                SetExifDate(pn, file_date)
-                check_date = GetExifDate(pn)
-                if check_date is not None:
-                    print("Added date to {}".format(pn))
-                    dated = dated + 1
-                else:
+            if ext.lower() in picture_exts:
+                try:
+                    SetExifDate(pn, file_date)
+                    check_date = GetExifDate(pn)
+                    if check_date is not None:
+                        print("{}: added Exif date".format(pn))
+                        dated = dated + 1
+                    else:
+                        undated = undated + 1
+                        print("{}: cannot add Exif date".format(pn))
+                except:
+                    exif_date = None
                     undated = undated + 1
-                    print("Date cannot be added to {}".format(pn))
-            except:
-                exif_date = None
-                undated = undated + 1
-                print("{} cannot be updated".format(pn))
+                    print("{}: SetExifDate exception".format(pn))
 
         # If the two dates match, do nothing
         if true_file_date is not None and exif_date is not None:
@@ -167,7 +160,7 @@ def rename(pn, strip, reset, recursive):
         try:
             os.rename(pn, newname)
             renamed = renamed + 1
-            print("{} renamed {}".format(pn, newname))
+            print("{} renamed".format(newname))
         except:
             print("{} cannot be renamed {}".format(pn, newname))
         break
@@ -175,8 +168,21 @@ def rename(pn, strip, reset, recursive):
     if i > 9:
         print("{} cannot be renamed {}".format(pn, newname))
 
-def main():
-    pass
+def main(pn, strip, reset, recursive):
+    """ Rename files in a folder, possibly recursively """
+    global filespec
+
+    # Process files in a folder with no recursion
+    for fn in glob.glob(glob.escape(pn) + '\\' + filespec):
+        if os.path.isfile(fn):
+            rename(fn, strip, reset, recursive)
+
+    # Process folders recursively, when requested
+    if recursive:
+        # Note that the saved filespec cannot be used here
+        for pn in glob.glob(glob.escape(pn) + "\\*"):
+            if os.path.isdir(pn):
+                main(pn, strip, reset, recursive)
 
 if __name__ == '__main__':
     """ Process command line arguments """
@@ -211,5 +217,6 @@ if __name__ == '__main__':
     if strip:
         reset = False
 
-    rename(pn, strip, reset, recursive) # rename all files in a filespec
-    print("Found {}, well named {}, renamed {}, added dates to {}, failed to date {}".format(found, well_named, renamed, dated, undated))
+    main(pn, strip, reset, recursive) # rename all files in a folder
+    print("Found {:,}, well named {:,}, renamed {:,}, added dates to {:,}, failed to date {:,}".format(\
+        found, well_named, renamed, dated, undated))

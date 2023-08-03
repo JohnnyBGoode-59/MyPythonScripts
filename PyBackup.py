@@ -39,7 +39,7 @@ def logerror(msg, pathname=None):
         fullmsg = msg + '\n'
         shortmsg = msg + ' (logged)'
     else:
-        fullmsg = pathname + ": " + msg + '\n'
+        fullmsg = '"' + pathname + '": ' + msg + '\n'
         shortmsg = nickname(pathname) + ": " + msg + ' (logged)'
 
     if logfile != None:
