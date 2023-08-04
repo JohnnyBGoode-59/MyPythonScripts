@@ -27,4 +27,5 @@ pybackup -u step10
 Rem Review the errors that occurred
 cd step10
 attrib *.* /s>>%temp%\pybackup.step10.log.txt
-%Rem% %temp%\pybackup.step8.log.txt
+endlocal
+fc %temp%\pybackup.step*.log.txt results\*.*

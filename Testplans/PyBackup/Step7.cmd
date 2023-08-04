@@ -35,4 +35,5 @@ Rem See how the destination folder compares with the source.
 
 Rem Review the errors that occurred
 attrib *.* /s>>%temp%\pybackup.step7.log.txt
-%Rem% %temp%\pybackup.step7.log.txt
+endlocal
+fc %temp%\pybackup.step?.log.txt results\*.*

@@ -17,4 +17,5 @@ attrib -a step3\*.* /s
 pybackup -v step3
 @ren %temp%\pybackup.log.txt pybackup.step3.log.txt
 attrib step3\*.* /s >>%temp%\pybackup.step3.log.txt
-%Rem% %temp%\pybackup.step3.log.txt
+endlocal
+fc %temp%\pybackup.step?.log.txt results\*.*

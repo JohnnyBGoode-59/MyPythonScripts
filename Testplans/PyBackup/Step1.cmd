@@ -66,6 +66,6 @@ ren %temp%\pybackup.log.txt pybackup.step1.log.txt
 
 @Rem Review the logfile for this step
 attrib %temp%\pybackup\*.* /s >>%temp%\pybackup.step1.log.txt
-%Rem% %temp%\pybackup.step1.log.txt
 endlocal
+fc %temp%\pybackup.step?.log.txt results\*.*
 @exit /b

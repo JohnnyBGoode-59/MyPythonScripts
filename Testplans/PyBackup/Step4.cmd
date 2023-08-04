@@ -23,4 +23,5 @@ Rem See how the destination folder compares with the source.
 Rem Review the errors that occurred
 attrib %temp%\pybackup\step3\*.* /s>>%temp%\pybackup.step4.log.txt
 attrib z:\pybackup\step4\*.* /s>>%temp%\pybackup.step4.log.txt
-%Rem% %temp%\pybackup.step4.log.txt
+endlocal
+fc %temp%\pybackup.step?.log.txt results\*.*

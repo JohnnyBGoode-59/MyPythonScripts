@@ -25,4 +25,5 @@ Rem Review for errors
 cd %temp%\pybackup\step5
 attrib z:\pybackup\step4\*.* /s >>%temp%\pybackup.step5.log.txt
 attrib *.* /s >>%temp%\pybackup.step5.log.txt
-%Rem% %temp%\pybackup.step5.log.txt
+endlocal
+fc %temp%\pybackup.step?.log.txt results\*.*

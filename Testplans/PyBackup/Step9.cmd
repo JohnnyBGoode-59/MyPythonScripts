@@ -40,4 +40,5 @@ icacls step9\Inaccessible\*.* /inheritance:e /q
 Rem Review the errors that occurred
 cd %temp%\pybackup
 attrib *.* /s>>%temp%\pybackup.step9.log.txt
-%Rem% %temp%\pybackup.step9.log.txt
+endlocal
+fc %temp%\pybackup.step?.log.txt results\*.*
