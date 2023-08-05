@@ -1,6 +1,6 @@
 #-------------------------------------------------------------------------------
-# Name: Compare-CRCs
-# Purpose: Read a file of CRC values and display lines with matching values
+# Name: CompareCRCs
+# Purpose: Compare crc files in two folders, looking for new and different files.
 #
 # Author: John Eichenberger
 #
@@ -11,98 +11,96 @@
 
 import glob, os, sys, zlib
 
-duplicates = 0
-removed = 0
-deleted = 0
+import time
+from JsonFile import JsonFile
+from CmdFile import CmdFile
+from FindCRCs import FindCrcs
 
-def main(crcfile, auto_delete):
-    global duplicates, removed, deleted
+def help():
+    print("Compare-CRCs [-r | folder1 [-w]] [-r | folder2 [-w]]\n")
+    print("-r\tReloads a saved set of CRC files from a json file")
+    print("-w\t(Re)Creates a json file")
+    print("\nFor each of the two folders one can use -r instead of naminig the folder.")
+    print("-w is optional. It will save results in two different files.")
+    exit()
 
-    # Read the CRC file to create a dictionary
-    f = open(crcfile)
-    next(f) # skip header line
-    crcs = {}
-    for line in f:
-        sline = line.split(',')
-        crc = sline[0]
-        sline = line.split('"')
-        fn = sline[1]
-        pn = sline[3]
+def onlyinfirst(crcs1, crcs2, cmdfile):
+    """ Find CRCs that are only in crcs1 """
+    count = 0
+    for crc in crcs1:
+        if crc == 'pathname':
+            continue
+        if crc not in crcs2:
+            if count == 0:
+                cmdfile.write("These files are only in {}".format(crcs1['pathname']))
+            cmdfile.write(crcs1[crc])
+            count += 1
+    return count
 
-        # Add one dictionary value
-        if crc in crcs:
-            crcs[crc] += [pn]
-            duplicates += 1
-        else:
-            crcs[crc] = [pn]
-    f.close()
-
-    # Print duplicates, select which one to keep, delete the others
-    for crc in crcs:
-        # Check to make sure duplicates still exist
-        if len(crcs[crc]) > 1:
-            for pn in crcs[crc]:
-                if not os.path.isfile(pn):
-                    crcs[crc].remove(pn)
-                    removed += 1
-
-            # Select duplicates to delete
-            while len(crcs[crc]) > 1:
-                # auto delete duplicates as requested
-                if auto_delete != "":
-                    try:
-                        # Remove one file
-                        pn = crcs[crc][int(auto_delete)]
-                        os.remove(pn)
-                        print("{} deleted".format(pn))
-                        deleted += 1
-                    except:
-                        removed += 1
-                    crcs[crc].remove(pn)
-                    continue
-
-                # Display the list
-                for i in range(len(crcs[crc])):
-                    print('{}: {}'.format(i, crcs[crc][i]))
-                try:
-                    num = input("Select a file to remove: ")
-                    if num == "":
-                        num = None
-                        break
-
-                    # Remove one file
-                    pn = crcs[crc][int(num)]
-                    os.remove(pn)
-                    crcs[crc].remove(pn)
-                    deleted += 1
-                except:
-                    pass
+def different(crcs1, crcs2, cmdfile):
+    """ Find CRCs that are different """
+    cmdfile.write("CRCs for these files are different".format(crcs1['pathname']))
+    cmdfile.write(crcs1['pathname'])
+    cmdfile.write(crcs2['pathname'])
+    for crc in crcs1:
+        if crc == 'pathname':
+            continue
+        if crc in crcs2 and crc != crcs2[crc]:
+            cmdfile.write(crcs1[crc])
 
 if __name__ == '__main__':
-    """ Compare-CRCs {filename}
-        Read a CRC CSV file and report any matching CRCs.
-    """
-    # Read %Pictures%/crc.txt when it is present
-    filespec = os.environ.get('Pictures')
-    if filespec is None:
-        # Or ~/Photos/Pictures/crcs.csv
-        filespec = os.environ.get('USERPROFILE')
-        if filespec is None:
-            # Or /Pictures/crcs.csv
-            filespec = '\\Pictures'
-    filespec = os.path.expandvars(filespec+"\\crcs.csv")
-    auto_delete = ""
+    start = time.time()
 
-    # Parse the command line for a specific pathname
-    for arg in sys.argv[1:]:
-        if arg[0] == '-':
-            if arg[1] == 'a':
-                if arg[2] in "01":
-                    auto_delete = arg[2]
-        elif os.path.isfile(arg):
-            filespec = os.path.abspath(arg)
+    # (Re)Create the pathnames (and files) used by this programe
+    file1 = JsonFile("Compare.Crcs1.json")
+    file1crcs = None
+    file2 = JsonFile("Compare.Crcs2.json")
+    file2crcs = None
+    crcs = []
 
-    main(filespec, auto_delete)
-    print("{} duplicate CRC's found".format(duplicates))
-    print("{} were previously deleted".format(removed))
-    print("{} were just now deleted".format(deleted))
+    # Combine as many folders and requested
+    if len(sys.argv) > 1:
+        for arg in sys.argv[1:]:
+            if arg in ['-?', '/?', '-h', '-H']:
+                help()
+
+            elif arg in ['-r', '-R', '/r', '/R']:
+                if len(crcs) == 0:
+                    crcs += [{"pathname": pathname}]
+                    crcs[-1] += file1.read()
+                elif len(folders) == 1:
+                    crcs += [{"pathname": pathname}]
+                    crcs[-1] += file2.read()
+                else:
+                    help()
+
+            elif arg in ['-w', '-W', '/w', '/W']:
+                if len(crcs) == 0:
+                    help()
+                elif len(crcs) == 1:
+                    file1.write(crcs[0])
+                else:
+                    file2.write(crcs[1])
+
+            else:
+                pathname = os.path.abspath(arg)
+                if not os.path.isdir(pathname):
+                    print("{} does not exist\n".format(pathname))
+                    help()
+                if len(crcs) < 2:
+                    crcs += [{"pathname": pathname}]
+                    crcs[-1] = FindCrcs(crcs[-1], pathname)
+                else:
+                    help()
+
+    if len(crcs) < 2:
+        help()
+
+    cmdfile = CmdFile("Compare.Crcs.cmd", "Rem 1 ", clean=True)
+    count = onlyinfirst(crcs[0], crcs[1], cmdfile)
+    cmdfile = CmdFile("Compare.Crcs.cmd", "Rem 2 ")
+    count += onlyinfirst(crcs[1], crcs[0], cmdfile)
+    print("{} differences found".format(count))
+
+
+    # C:\Users\janita\AppData\Local\Temp\pybackup\step0 -w C:\Users\janita\AppData\Local\Temp\pybackup\step1 -w

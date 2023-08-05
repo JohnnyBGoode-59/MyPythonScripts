@@ -10,14 +10,12 @@
 # Licence:     GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
 #-------------------------------------------------------------------------------
 
-import glob, os, re, sys, zlib
-import json
+import glob, os, re, sys
+from JsonFile import JsonFile
 import time
 
 crc_filename = "crc.csv"
-jsonfile = "duplicate-crcs.json" # for -r and -w
 cleanscript = "remove-duplicates.cmd"
-crcs = {}
 found = 0
 duplicates = 0
 order_switched = False
@@ -55,13 +53,13 @@ def log(original, duplicate):
     print("{} == {}".format(nickname(duplicate), nickname(original)))
     duplicates = duplicates + 1
 
-def AddCrcs(filename):
+def AddCrc(crcs, filename):
     """ Add CRC values from one file """
-    global crcs, found
+    global found
     try:
         f = open(filename)
     except: # open may not find the file
-        return
+        return crcs
 
     rootp, crcfn = os.path.split(filename)
     for line in f:
@@ -78,26 +76,7 @@ def AddCrcs(filename):
         else:
             crcs[crc] = pn
     f.close()
-
-def ReadJson(filename):
-    """ Read a dictionary from a json file or return an empty dictionary """
-    try:
-        print("Resetting from:", filename)
-        with open(filename) as jf:
-            data = json.load(jf)
-        return json.loads(data)
-    except:
-        return {}
-
-def WriteJson(data, filename):
-    """ Write a dictionary to a json file """
-    try:
-        print("Saving to:", filename)
-        with open(filename, 'w') as fh:
-            js = json.dumps(data)
-            json.dump(js, fh)
-    except:
-        pass
+    return crcs
 
 def help():
     print("Find-CRCs [-r] [folders] [-w]\n")
@@ -111,17 +90,18 @@ def help():
     print("Conversely, to purposely use relative folder names, use a dot prefix.")
     exit()
 
-def main(pn):
-    """ Combine all crcs together in order to find duplicates. """
+def FindCrcs(crcs, pn):
+    """ Combine all crcs together from a directory tree """
     global found
 
     print("Adding from {} -- {:,} found so far".format(nickname(pn), found))
     for pn in glob.glob(glob.escape(pn)+'/*'):
         rootp, fn = os.path.split(pn)
         if fn == crc_filename:
-            AddCrcs(pn)
+            crcs = AddCrc(crcs, pn)
         elif os.path.isdir(pn):
-            main(pn)
+            crcs = FindCrcs(crcs, pn)
+    return crcs
 
 def Init(rootp, fn, clean=True):
     if rootp is None:
@@ -136,13 +116,12 @@ def Init(rootp, fn, clean=True):
     return pn
 
 if __name__ == '__main__':
-    # Time the backup
     start = time.time()
 
     # (Re)Create the pathnames (and files) used by this programe
     temp = os.environ.get('TEMP')
     cleanscript = Init(temp, cleanscript)
-    jsonfile = Init(temp, jsonfile, False)  # Not erased but not read unless requested
+    jsonfile = JsonFile("FindCRCs.json")
     processed = []
 
     # Combine as many folders and requested
@@ -151,13 +130,13 @@ if __name__ == '__main__':
             if arg in ['-?', '/?', '-h', '-H']:
                 help()
             elif arg in ['-r', '-R', '/r', '/R']:
-                crcs = ReadJson(jsonfile)
+                crcs = jsonfile.read()
             elif arg in ['-w', '-W', '/w', '/W']:
-                WriteJson(crcs, jsonfile)
+                jsonfile.write(crcs)
             elif arg in ['-s', '-S']:
                 order_switched = True
             elif os.path.isdir(arg):
-                main(arg)
+                crcs = FindCrcs(crcs, arg)
                 processed += [arg]
 
     if duplicates == 0:
