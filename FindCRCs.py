@@ -12,6 +12,7 @@
 
 import glob, os, re, sys, zlib
 import json
+import time
 
 crc_filename = "crc.csv"
 jsonfile = "duplicate-crcs.json" # for -r and -w
@@ -20,6 +21,7 @@ crcs = {}
 found = 0
 duplicates = 0
 order_switched = False
+from PyBackup import timespent
 
 def nickname(source):
     """ Shorten really long names when all I really need is the basics. """
@@ -39,15 +41,15 @@ def log(original, duplicate):
     # But provide comments in that file in case the original files should be removed instead.
     log = open(cleanscript, 'a')
     if duplicates == 0:
-        log.write("Rem {} removes duplicate files\n".format(cleanscript))
-        log.write("Pick which files to remove.\n")
+        log.write("@Rem {} removes duplicate files\n".format(cleanscript))
+        log.write("@Rem Pick which files to remove.\n")
     # Sometimes the copies are really the ones to keep.
     if order_switched:
-        log.write('del "{}"\n'.format(original))
-        log.write('Rem "{}"\n'.format(duplicate))
+        log.write('del  "{}"\n'.format(original))
+        log.write('@Rem "{}"\n'.format(duplicate))
     else:
-        log.write('del "{}"\n'.format(duplicate))
-        log.write('Rem "{}"\n'.format(original))
+        log.write('del  "{}"\n'.format(duplicate))
+        log.write('@Rem "{}"\n'.format(original))
     log.close()
 
     print("{} == {}".format(nickname(duplicate), nickname(original)))
@@ -69,12 +71,12 @@ def AddCrcs(filename):
         if m == None:
             m = re.match('([0-9A-F]{8}),(.*)', line)
         crc = m.group(1)
+        found = found + 1
         pn = rootp + '\\' + m.group(2)
         if crc in crcs:
             log(crcs[crc], pn)
         else:
             crcs[crc] = pn
-            found = found + 1
     f.close()
 
 def ReadJson(filename):
@@ -113,7 +115,7 @@ def main(pn):
     """ Combine all crcs together in order to find duplicates. """
     global found
 
-    print("Adding from {}".format(nickname(pn)))
+    print("Adding from {} -- {:,} found so far".format(nickname(pn), found))
     for pn in glob.glob(glob.escape(pn)+'/*'):
         rootp, fn = os.path.split(pn)
         if fn == crc_filename:
@@ -134,6 +136,9 @@ def Init(rootp, fn, clean=True):
     return pn
 
 if __name__ == '__main__':
+    # Time the backup
+    start = time.time()
+
     # (Re)Create the pathnames (and files) used by this programe
     temp = os.environ.get('TEMP')
     cleanscript = Init(temp, cleanscript)
@@ -171,3 +176,4 @@ if __name__ == '__main__':
             print(fh.read())
 
         print("\n{:,} Duplicates found.\nremove-duplicates ?".format(duplicates))
+    print("{:,} CRCs found. Completed in {}".format(found, timespent(start)))
