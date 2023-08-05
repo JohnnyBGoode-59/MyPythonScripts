@@ -26,7 +26,7 @@ crc_missing = 0 # source files found with no matching CRC
 crc_broken = 0  # actual CRC is different than CRC file, or crc32 failed
 copy_broken = 0 # a copy failed or a CRC file failed to be created
 new_dest = 0    # a destination file is newer than the corresponding crc file
-deleted_fn = 0  # a backed up file has been deleted
+deleted_fn = 0  # a backed up file was deleted
 
 now = 0         # This time.time() value is used by display_update()
 
@@ -40,20 +40,19 @@ class logging:
     """ Provides a simple class to log messages to a file. """
     logfile = None
 
-    def __init__(self, pn, rootp=None, clean=True):
+    def __init__(self, fn, clean=True):
         """ pn can be a fully qualifed pathname or relative pathname.
             rootp, if supplied, should be a fully qualified root folder.
             clean defaults to True, meaning that the logfile will be removed.
         """
-        if rootp is not None:
-            pn = rootp + '\\' + pn
-        if pn == None:
-            self.logfile = None
-        else:
-            self.logfile = os.path.abspath(pn)
+        temp = os.environ.get('TEMP')
+        if temp is None:
+            print("Logging is disabled: TEMP is not defined")
+            return
+        self.logfile = os.path.abspath(temp + '\\' + fn)
         if clean:
             try:
-                os.remove(pn)
+                os.remove(self.logfile)
             except:
                 pass
 
@@ -220,7 +219,7 @@ def verify(log, source, update=False):
         for fn in dict(source_crcs).keys():
             pn = source + '\\' + fn
             if not os.path.exists(pn):
-                log.error("has been deleted", pn)
+                log.error("was deleted", pn)
                 deleted_fn = deleted_fn + 1
                 source_crcs.pop(fn)
 
@@ -313,7 +312,7 @@ def main(log, source, dest):
         for fn in dict(dest_crcs).keys():
             pn = dest + '\\' + fn
             if not os.path.exists(pn):
-                log.error("has been deleted", pn)
+                log.error("was deleted", pn)
                 deleted_fn = deleted_fn + 1
                 dest_crcs.pop(fn)
 
@@ -342,13 +341,13 @@ def main(log, source, dest):
                         new_dest = new_dest + 1
                         AddCrc(log, dest_pn, dest_crcs)
                     elif os.path.getmtime(dest_pn) > dest_modified:
-                        log.error("has been changed", dest_pn)
+                        log.error("was changed", dest_pn)
                         new_dest = new_dest + 1
                         AddCrc(log, dest_pn, dest_crcs)
 
                 # Forget destination crc files if the file no longer exists
                 elif fn in dest_crcs:
-                    log.error("has been deleted", dest_pn)
+                    log.error("was deleted", dest_pn)
                     deleted_fn = deleted_fn + 1
                     dest_crcs.pop(fn)
 
@@ -404,12 +403,7 @@ if __name__ == '__main__':
     start = time.time()
 
     # (Re)Create a logfile used for severe errors
-    temp = os.environ.get('TEMP')
-    if temp is None:
-        print("TEMP is not defined as an environment variable")
-        log = logging(None)
-    else:
-        log = logging("\\PyBackup.log.txt", temp)
+    log = logging("PyBackup.log.txt")
 
     # First look for command line switches
     if len(sys.argv) >= 2 and sys.argv[1][0] in ['-', '/']:
