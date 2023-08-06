@@ -2,8 +2,6 @@
 @Rem See what happens when source files cannot be accessed
 @Rem Prerequisite: run step5
 SetLocal
-set Rem=Rem 
-if "%1"=="" set Rem=
 
 Rem The next lines delete files and folders that are no longer required
 if exist %temp%\pybackup.step6.log.txt del %temp%\pybackup.step6.log.txt
@@ -22,7 +20,7 @@ Echo Step 5: Both crc.csv and ReadMe.Txt are now inaccessible.>Inaccessible\acl.
 
 cd %temp%\pybackup
 @echo on
-pybackup step5 step6
+%2 pybackup step5 step6
 @echo off
 ren %temp%\pybackup.log.txt pybackup.step6.log.txt
 

@@ -2,8 +2,6 @@
 @Rem Perform a verify operation with hard errors present
 @Rem Prerequisite: run step7
 SetLocal
-set Rem=Rem 
-if "%1"=="" set Rem=
 
 Rem The next lines delete files and folders that are no longer required
 if exist %temp%\pybackup.step8.log.txt del %temp%\pybackup.step8.log.txt
@@ -25,7 +23,7 @@ type Inaccessible\readme.txt
 
 @echo on
 cd %temp%\pybackup
-pybackup -v step8
+%2 pybackup -v step8
 @echo off
 @ren %temp%\pybackup.log.txt pybackup.step8.log.txt
 

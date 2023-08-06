@@ -2,8 +2,6 @@
 @Rem Perform a backup operation with hard errors present, both source and destination
 @Rem Prerequisite: run step7
 SetLocal
-set Rem=Rem 
-if "%1"=="" set Rem=
 
 Rem The next lines delete files and folders that are no longer required
 if exist %temp%\pybackup.step9.log.txt del %temp%\pybackup.step9.log.txt
@@ -29,7 +27,7 @@ icacls CannotCopy.txt /remove %USERNAME% /q
 
 @echo on
 cd %temp%\pybackup
-pybackup step8 step9
+%2 pybackup step8 step9
 @echo off
 @ren %temp%\pybackup.log.txt pybackup.step9.log.txt
 

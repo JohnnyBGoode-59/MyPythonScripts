@@ -2,8 +2,6 @@
 @Rem See what happens when destination files cannot be accessed
 @Rem Prerequisite: run step6
 SetLocal
-set Rem=Rem 
-if "%1"=="" set Rem=
 
 Rem The next lines delete files and folders that are no longer required
 if exist %temp%\pybackup.step7.log.txt del %temp%\pybackup.step7.log.txt
@@ -22,7 +20,7 @@ icacls Inaccessible\*.* /remove %USERNAME% /q
 
 @echo on
 cd %temp%\pybackup
-pybackup step6 step7
+%2 pybackup step6 step7
 @echo off
 @ren %temp%\pybackup.log.txt pybackup.step7.log.txt
 

@@ -1,8 +1,6 @@
 @echo off
 @Rem Back up a folder with issues to an existing, very similar folder.
 SetLocal
-set Rem=Rem 
-if "%1"=="" set Rem=
 
 @Rem The next lines delete files and folders created when this step is performed.
 cd %temp%
@@ -40,7 +38,7 @@ Rem Review the differences between Step0 and Step2 before backing up Step0
 @Rem Backup step0 to step2
 cd %temp%\pybackup
 @echo on
-pybackup step0 step2
+%2 pybackup step0 step2
 @echo off
 ren %temp%\pybackup.log.txt pybackup.step2.log.txt
 @Echo.

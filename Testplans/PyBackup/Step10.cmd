@@ -2,8 +2,6 @@
 @Rem Perform a update operation
 @Rem Prerequisite: run step9
 SetLocal
-set Rem=Rem 
-if "%1"=="" set Rem=
 
 Rem The next lines delete files and folders that are no longer required
 if exist %temp%\pybackup.step10.log.txt del %temp%\pybackup.step10.log.txt
@@ -20,7 +18,7 @@ del deleted.txt
 
 @echo on
 cd %temp%\pybackup
-pybackup -u step10
+%2 pybackup -u step10
 @echo off
 @ren %temp%\pybackup.log.txt pybackup.step10.log.txt
 
