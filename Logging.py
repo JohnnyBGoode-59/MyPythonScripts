@@ -72,7 +72,7 @@ class logging:
             return pn[0:self.style[1]] + "[...]" + pn[-self.style[2]:]
         return pn
 
-    def error(self, err, pathname=None):
+    def error(self, counters, err, pathname=None):
         """ Log an error that may include a pathname """
         fullmsg = err + '\n'
         shortmsg = err + ' (error)'
@@ -83,14 +83,35 @@ class logging:
         log.write(fullmsg)
         log.close()
         print(shortmsg)
+        self.increment(counters, err)
         now = time.time()
+        return counters
 
-    def counter(log, count, msg):
-        """ Display counters in a consistent way. """
+    def increment(self, counters, name):
+        """ Increment a counter in a dictionary."""
+        if name in counters:
+            counters[name] += 1
+        else:
+            counters[name] = 1
+
+    def counter(self, count, msg):
+        """ Display a counter in a consistent way. """
         if count == 1:
-            log.msg("1 {}.".format(msg))
+            self.msg("1 {}.".format(msg))
         elif count > 1:
-            log.msg("{:,} {}s.".format(count, msg))
+            self.msg("{:,} {}s.".format(count, msg))
+
+    def counters(self, counters):
+        """ Display a dictionary of counters """
+        for err in counters:
+            self.counter(counters[err], err)
+
+    def sum(self, counters):
+        """ Return the sum of a dictionary of counters """
+        sum = 0
+        for err in counters:
+            sum += counters[err]
+        return sum
 
     def remove(self):
         if os.path.exists(self.logfile):
@@ -98,21 +119,28 @@ class logging:
 
 if __name__ == '__main__':
     """ Test this class """
+    counters = {}
     timespent()
     testfile = "logfile.txt"
     log = logging(testfile, style=[10,12])
     log.msg("This is a simple message")
-    log.error("This is a simple error")
+    log.error(counters, "simple error")
     time.sleep(1)
+    log.increment(counters, "delay")
     time.sleep(1)
-    log.error("This is an error that includes a pathname", log.logfile)
+    log.increment(counters, "delay")
+    log.error(counters, "simple error", log.logfile)
     log = logging(testfile, clean=False)
-    log.error("This is another error that includes a pathname", log.logfile)
+    log.error(counters, "another error", log.logfile)
     time.sleep(1)
+    log.increment(counters, "delay")
     log.counter(123, "stick")
     log.counter(1, "pizza")
     log.counter(0, "unknown")
+    log.counter(log.sum(counters), "counter")
     for l in range(17):
         time.sleep(1)
+        log.increment(counters, "delay")
         display_update(l,"loops")
+    log.counters(counters)
     log.msg("Completed in {}".format(timespent()))
