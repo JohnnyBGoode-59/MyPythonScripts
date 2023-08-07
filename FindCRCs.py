@@ -12,48 +12,56 @@
 
 import glob, os, re, sys
 from JsonFile import JsonFile
-import time
+from Logging import logging, timespent
+from CmdFile import CmdFile
 
 crc_filename = "crc.csv"
-cleanscript = "remove-duplicates.cmd"
+cleanscript_filename = "remove-duplicates.cmd"
+json_filename = "FindCRCs.json"
+
 found = 0
 duplicates = 0
 order_switched = False
-from PyBackup import timespent
 
-def nickname(source):
-    """ Shorten really long names when all I really need is the basics. """
-    if len(source) > 50:
-        return source[0:10] + "[...]" + source[-40:]
-    return source
+def help():
+    print("""
+    Find-CRCs [-s] [-r] [folders] [-w]
 
-def log(original, duplicate):
+    -s  Switch the order files are displayed when duplicates are found.
+    -r  Reloads a saved set of CRC files from a master json file.
+    -w  (Re)creates that master json file.
+
+    Every other parameter should be that of a folder containing crc.csv files.
+
+    *** WARNING ***
+    Pathnames saved with -w may be relative. Do not change directories
+    and yet continue to use saved data.
+
+    Conversely, to purposely use relative folder names, use a dot prefix.""")
+    exit()
+
+def record_duplicate(cmdfile, original, duplicate):
     """ Log and record a script that can be used to remove duplicate files. """
-    global cleanscript, duplicates, switch_order
+    global cleanscript, duplicates, order_switched
 
     # Ignore calls with the exact same pathname for both parameters
-    if os.path.abspath(original) == os.path.abspath(duplicate):
+    if os.path.abspath(original.lower()) == os.path.abspath(duplicate.lower()):
         return
 
     # Create a command file that will remove all duplicate files
     # But provide comments in that file in case the original files should be removed instead.
-    log = open(cleanscript, 'a')
     if duplicates == 0:
-        log.write("@Rem {} removes duplicate files\n".format(cleanscript))
-        log.write("@Rem Pick which files to remove.\n")
+        cmdfile.remark("{} removes duplicate files.".format(cmdfile.log.logfile))
+        cmdfile.remark("Pick which files to remove.")
+
     # Sometimes the copies are really the ones to keep.
     if order_switched:
-        log.write('del  "{}"\n'.format(original))
-        log.write('@Rem "{}"\n'.format(duplicate))
+        cmdfile.command(original, duplicate)
     else:
-        log.write('del  "{}"\n'.format(duplicate))
-        log.write('@Rem "{}"\n'.format(original))
-    log.close()
-
-    print("{} == {}".format(nickname(duplicate), nickname(original)))
+        cmdfile.command(duplicate, original)
     duplicates = duplicates + 1
 
-def AddCrc(crcs, filename):
+def AddCrc(crcs, cmdfile, filename):
     """ Add CRC values from one file """
     global found
     try:
@@ -72,57 +80,32 @@ def AddCrc(crcs, filename):
         found = found + 1
         pn = rootp + '\\' + m.group(2)
         if crc in crcs:
-            log(crcs[crc], pn)
+            record_duplicate(cmdfile, crcs[crc], pn)
         else:
             crcs[crc] = pn
     f.close()
     return crcs
 
-def help():
-    print("Find-CRCs [-r] [folders] [-w]\n")
-    print("-r\tReloads a saved set of CRC files from a master json file")
-    print("-s\tSometimes the copies are really the ones to keep.")
-    print("-w\t(Re)Creates that master json file")
-    print("\nEvery other parameter should be that of a folder containing crc.csv files.")
-    print("\n*** WARNING ***")
-    print("Pathnames saved with -w may be relative.")
-    print("Do not change directories and continue to use saved data.")
-    print("Conversely, to purposely use relative folder names, use a dot prefix.")
-    exit()
-
-def FindCrcs(crcs, pn):
+def FindCrcs(crcs, cmdfile, folder):
     """ Combine all crcs together from a directory tree """
-    global found
-
-    print("Adding from {} -- {:,} found so far".format(nickname(pn), found))
-    for pn in glob.glob(glob.escape(pn)+'/*'):
+    count = len(crcs)
+    for pn in glob.glob(glob.escape(folder)+'/*'):
         rootp, fn = os.path.split(pn)
         if fn == crc_filename:
-            crcs = AddCrc(crcs, pn)
+            crcs = AddCrc(crcs, cmdfile, pn)
         elif os.path.isdir(pn):
-            crcs = FindCrcs(crcs, pn)
+            crcs = FindCrcs(crcs, cmdfile, pn)
+    print("{:,}: crcs added from {}".format(len(crcs)-count, cmdfile.log.nickname(folder)))
     return crcs
 
-def Init(rootp, fn, clean=True):
-    if rootp is None:
-        print("No root path to initialize output files. TEMP not defined?")
-        exit()
-    pn = rootp + '\\' + fn
-    try:
-        if clean:
-            os.remove(pn)
-    except:
-        pass
-    return pn
-
 if __name__ == '__main__':
-    start = time.time()
+    timespent()
 
     # (Re)Create the pathnames (and files) used by this programe
-    temp = os.environ.get('TEMP')
-    cleanscript = Init(temp, cleanscript)
-    jsonfile = JsonFile("FindCRCs.json")
+    jsonfile = JsonFile(json_filename)
+    cmdfile = CmdFile(cleanscript_filename)
     processed = []
+    crcs = {}
 
     # Combine as many folders and requested
     if len(sys.argv) > 1:
@@ -135,24 +118,22 @@ if __name__ == '__main__':
                 jsonfile.write(crcs)
             elif arg in ['-s', '-S']:
                 order_switched = True
-            elif os.path.isdir(arg):
-                crcs = FindCrcs(crcs, arg)
-                processed += [arg]
+            else:
+                pn= os.path.expandvars(arg) # expand but leave relative, maybe
+                if os.path.isdir(pn):
+                    crcs = FindCrcs(crcs, cmdfile, pn)
+                    processed += [pn]
+                else:
+                    help()
 
     if duplicates == 0:
         print("No duplicates found in {:,} files".format(found))
     else:
         # Add an all important command at the end of the cleanscript
         # It will update the crc files for the effected folders.
-        with open(cleanscript, 'a') as fh:
-            fh.write("PyBackup -u ")
-            for folder in processed:
-                fh.write("{} ".format(folder))
-            fh.write("\n")
-            fh.close()
-        print("\n\n")
-        with open(cleanscript) as fh:
-            print(fh.read())
-
+        pybackup_update = ""
+        for folder in processed:
+            pybackup_update += folder
+        cmdfile.remark(pybackup_update, "PyBackup -u ")
         print("\n{:,} Duplicates found.\nremove-duplicates ?".format(duplicates))
-    print("{:,} CRCs found. Completed in {}".format(found, timespent(start)))
+    print("{:,} CRCs found. Completed in {}".format(found, timespent()))

@@ -31,9 +31,9 @@ class CmdFile:
         if clean:
             self.remove()
 
-    def remark(self, line):
+    def remark(self, line, prefix="Rem "):
         """ Add a remark to the command file """
-        self.log.msg("Rem "+line)
+        self.log.msg(prefix+line)
 
     def command(self, pn1, pn2, prefixes=None):
         """ Add two pathnames to the command file using predefined prefixes for each pathname """
