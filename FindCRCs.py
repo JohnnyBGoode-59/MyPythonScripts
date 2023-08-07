@@ -23,7 +23,7 @@ found = 0
 duplicates = 0
 order_switched = False
 
-def help():
+def help(cmdfile):
     print("""
     Find-CRCs [-s] [-r] [folders] [-w]
 
@@ -38,6 +38,7 @@ def help():
     and yet continue to use saved data.
 
     Conversely, to purposely use relative folder names, use a dot prefix.""")
+    cmdfile.remove()
     exit()
 
 def record_duplicate(cmdfile, original, duplicate):
@@ -45,14 +46,10 @@ def record_duplicate(cmdfile, original, duplicate):
     global cleanscript, duplicates, order_switched
 
     # Ignore calls with the exact same pathname for both parameters
-    if os.path.abspath(original.lower()) == os.path.abspath(duplicate.lower()):
+    original = os.path.abspath(original.lower())
+    duplicate = os.path.abspath(duplicate.lower())
+    if  original == duplicate:
         return
-
-    # Create a command file that will remove all duplicate files
-    # But provide comments in that file in case the original files should be removed instead.
-    if duplicates == 0:
-        cmdfile.remark("{} removes duplicate files.".format(cmdfile.log.logfile))
-        cmdfile.remark("Pick which files to remove.")
 
     # Sometimes the copies are really the ones to keep.
     if order_switched:
@@ -107,6 +104,15 @@ if __name__ == '__main__':
     processed = []
     crcs = {}
 
+    # Start off the command file with a few details.
+    # But provide comments in that file in case the original files should be removed instead.
+    rootp, cmdline = os.path.split(sys.argv[0])
+    for arg in sys.argv[1:]:
+        cmdline += ' ' + arg
+    cmdfile.remark("{}".format(os.getcwd() + "> " + cmdline), silent=True)
+    cmdfile.remark("{} removes duplicate files.".format(cmdfile.log.logfile), silent=True)
+    cmdfile.remark("Pick which files to remove.", silent=True)
+
     # Combine as many folders and requested
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:
@@ -122,18 +128,19 @@ if __name__ == '__main__':
                 pn= os.path.expandvars(arg) # expand but leave relative, maybe
                 if os.path.isdir(pn):
                     crcs = FindCrcs(crcs, cmdfile, pn)
-                    processed += [pn]
+                    processed += [os.path.abspath(pn)]
                 else:
-                    help()
+                    help(cmdfile)
 
     if duplicates == 0:
         print("No duplicates found in {:,} files".format(found))
+        cmdfile.remove()
     else:
         # Add an all important command at the end of the cleanscript
         # It will update the crc files for the effected folders.
         pybackup_update = ""
         for folder in processed:
-            pybackup_update += folder
+            pybackup_update += ' ' + folder
         cmdfile.remark(pybackup_update, "PyBackup -u ")
         print("\n{:,} Duplicates found.\nremove-duplicates ?".format(duplicates))
     print("{:,} CRCs found. Completed in {}".format(found, timespent()))
