@@ -17,22 +17,20 @@ from Logging import logging, display_update, timespent
 ini_filename = "backup.ini"
 crc_filename = "crc.csv"        # the control file found in every folder
 
-copied = 0      # files copied
-found = 0       # files found
-folders = 0     # folders processed
-hashes = 0      # hashes computed
+szFolder = "folder"
+szFile = "file"
+szHashedFile = "hashed file"
+szCopiedFile = "copied file"
+stats = {szFolder:0, szFile:0, szHashedFile:0, szCopiedFile: 0}
 errors = {}
 
 
 def display_summary(log, operation, start):
     """ Display a total operational statistics in a consistent way. """
-    global folders, found, copied, hashes
-    global errors
+    #global folders, found, copied, hashes
+    global stats, errors
     log.msg("\n{} complete.".format(operation))
-    log.counter(folders, "folder")
-    log.counter(found, "file")
-    log.counter(copied, "copied file")
-    log.counter(hashes, "hashed file")
+    log.counters(stats)
     log.counters(errors)
     log.msg("Completed in {}".format(timespent(start)))
 
@@ -78,12 +76,12 @@ def AddCrc(log, pn, crcs, crc = None):
     """ Add a CRC to a dictionary of CRCs.
         This should only be called for an existing file.
         """
-    global hashes, errors
+    global stats, errors, szHhashedFile
     rootp, fn = os.path.split(pn)
     try:
         if crc == None:
             crc = crc32(pn)
-            hashes = hashes + 1
+            log.increment(stats, szHashedFile)
         crcs[fn] = crc
     except: # crc32 must have failed
         if fn in crcs:
@@ -105,8 +103,8 @@ def WriteCrcs(log, pn, crcs):
 
 def verify(log, source, update=False):
     """ check crc values for one folder """
-    global crc_filename, found, folders, hashes
-    global errors
+    global crc_filename
+    global stats, errors, szFolder, szHashedFile, szFile
 
     # Start by reading CRC files, if they exist
     source_crcs, source_modified = ReadCrcs(log, source)
@@ -117,9 +115,10 @@ def verify(log, source, update=False):
         missing = False
 
     print("{}: {}: {} folders, {} hashed, {} errors".format(\
-        'U' if update else 'V', log.nickname(source), folders, hashes, log.sum(errors)))
-    display_update(found, "found", True)
-    folders = folders + 1
+        'U' if update else 'V', log.nickname(source), \
+        stats[szFolder], stats[szHashedFile], log.sum(errors)))
+    display_update(stats[szFile], szFile, True)
+    log.increment(stats, szFolder)
 
     # Prune out the crc values for any files that no longer exist
     if not missing:
@@ -133,27 +132,28 @@ def verify(log, source, update=False):
     # Recursively search the source folder
     for pn in glob.glob(glob.escape(source) + '\\*'):
         rootp, fn = os.path.split(pn)
-        display_update(found, "found")
+        display_update(stats[szFile], szFile)
         if os.path.isfile(pn):
             if fn != crc_filename:  # ignore the CRC control file
                 # For every other file in the source folder
-                found = found + 1
+                log.increment(stats, szFile)
                 rootp, fn = os.path.split(pn)
                 if update and fn in source_crcs \
                     and source_modified != None \
                     and os.path.getmtime(pn) <= source_modified:
                     continue;   # -u: skip old files
                 print("{}: checking".format(log.nickname(pn)))
-                display_update(found, "found", True)
+                display_update(stats[szFile], szFile)
                 try:
                     crc = crc32(pn)
                 except: # crc32 may not find the file
                     log.error(errors, "crc32 failure", pn)
                     continue;
-                hashes = hashes + 1
+
+                log.increment(stats, szHashedFile)
                 if not missing:
                     if fn not in source_crcs:
-                        log.error(errors, "new source file", pn)
+                        log.count(stats, "new source file", pn)
                     elif source_crcs[fn] != crc:
                         log.error(errors, "modified source file", pn)
                 AddCrc(log, pn, source_crcs, crc)
@@ -167,37 +167,37 @@ def verify(log, source, update=False):
 
 def backup(log, src, dst):
     """ backup one source file """
-    global copied, errors
+    global copied, stats, errors, szCopiedFile
     rootp, srcfn = os.path.split(src)
     print("BC: {}".format(log.nickname(dst)))   # Backup Copy
     try:
         copyfile(src, dst)
-        copied = copied + 1
-        return 1
     except:
         log.error(errors, "copyfile failure", src)
         log.msg('\t"{}": not replaced'.format(dst))
         return 0
+    log.count(stats, szCopiedFile, dst)
+    return 1
 
 def recursive_mkdir(pn):
     """ Create a folder, recursively if necessary """
     if not os.path.isdir(pn):
         rootp, fn = os.path.split(pn)
-        if not os.path.isdir(rootp) and len(rootp) > 0:
+        if not os.path.isdir(rootp) and len(fn) > 0:
             recursive_mkdir(rootp)
         os.mkdir(pn)
 
 ##############################################################################
 def main(log, source, dest):
     """ backup one source folder """
-    global crc_filename, copied, found, folders, new_dest
-    global errors
+    global crc_filename
+    global stats, errors, szFolder, szCopiedFile, szFile
 
     # Start by reading CRC files, if they exist
     print("B: {}: {} folders, {} copied, {} errors".format( \
-        log.nickname(source), folders, copied, log.sum(errors)))
-    display_update(found, "found", True)
-    folders = folders + 1
+        log.nickname(source), stats[szFolder], stats[szCopiedFile], log.sum(errors)))
+    display_update(stats[szFile], szFile, True)
+    log.increment(stats, szFolder)
     source_crcs, source_modified = ReadCrcs(log, source)
     recursive_mkdir(dest)
     dest_crcs, dest_modified = ReadCrcs(log, dest)
@@ -221,19 +221,19 @@ def main(log, source, dest):
     # Recursively search the source folder
     for pn in glob.glob(glob.escape(source) + '\\*'):
         rootp, fn = os.path.split(pn)
-        display_update(found, "found")
+        display_update(stats[szFile], szFile)
         if os.path.isfile(pn):
             if fn == crc_filename:
                 pass
             else:
                 # For every file in the source folder
                 dest_pn = dest + '\\' + fn
-                found = found + 1
+                log.increment(stats, szFile)
 
                 # When source_modified is None, source_crcs is empty
                 # Update the source CRC if it is unknown or the file has changed
                 if not fn in source_crcs or os.path.getmtime(pn) > source_modified:
-                    log.increment(errors, "new source crc")
+                    log.increment(stats, "new source crc")  # Not really an error
                     AddCrc(log, pn, source_crcs)
 
                 # Update the destination CRC for existing destination files
@@ -364,9 +364,11 @@ if __name__ == '__main__':
     # Allow exceptions for the rest
     for line in f:
         if line[0] != '#':
-            if line[-1] == '\n':
-                line = line[:-1]
-            source, dest = line.split(',')  # pathnames containing commas would fail
-            main(log, os.path.abspath(source), os.path.abspath(dest))
+            # Match two quoted names separated by a comma
+            m = re.match('"(.*?)","(.*?)"', line)
+            if m != None:
+                main(log, os.path.abspath(m.group(1)), os.path.abspath(m.group(2)))
+            else:
+                log.error(errors, "inifile syntax error", line[:-1])
     f.close()
     display_summary(log, "Backup", start)
