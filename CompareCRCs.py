@@ -15,9 +15,9 @@ from JsonFile import JsonFile
 from CmdFile import CmdFile
 from FindCRCs import FindCrcs
 from PyBackup import ReadCrcs
-from Logging import logging
+from Logging import logging, display_update
 
-counters = {}
+errors = {}
 
 def help():
     print("""There are two ways to use this program.
@@ -52,72 +52,84 @@ Examples:
 
 def find_unique(log, crcs1, crcs2):
     """ Find CRCs that are only in crcs1 """
-    global counters
+    global errors
     for crc in crcs1:
         if crc == "pathname":
             continue
         if crc not in crcs2:
-            log.error(counters, "unique crc", crcs1[crc])
+            log.error(errors, "unique crc", crcs1[crc])
         else:
-            log.increment(counters, "identical crc")
+            log.increment(errors, "identical crc")
 
 def compare_dictionaries(log, crcs1, crcs2, cmdfile):
     """ compare two dictionaries created from two folders """
-    global counters
+    global errors
     for crcs in [crcs1, crcs2]:
         crcs = FindCrcs(crcs, cmdfile, crcs["pathname"])
     find_unique(log, crcs1, crcs2)
     identical = "identical crc"
-    if identical in counters:
-        identical_crcs = counters[identical]
+    if identical in errors:
+        identical_crcs = errors[identical]
     else:
         identical = 0
     find_unique(log, crcs2, crcs1)
-    counters[identical] = identical_crcs
+    errors[identical] = identical_crcs
 
 def compare_folders(log, pn1, pn2, cmdfile):
     """ Compare crc files in two folder """
-    global counters
-    print('"{}": comparing'.format(pn1))
+    global errors
+    print('"{}": comparing'.format(log.nickname(pn1)))
+    display_update(0, "", True)
     crcs1, lm1 = ReadCrcs(log, pn1)
     crcs2, lm2 = ReadCrcs(log, pn2)
 
     # look for differences and unique pn1 files
-    for fn in crcs1:
+    for fn, crc in crcs1.items():
+        srcfpn = pn1 + '\\' + fn
         if fn in crcs2:
-            if crcs1[fn] != crcs2[fn]:
-                counters = log.error(counters, "different file", pn1 + '\\' + fn)
+            if crc != crcs2[fn]:
+                log.error(errors, "different file", srcfpn)
+                # copy src to dest? -- not real safe
             else:
-                log.increment(counters, "identical file")
+                log.increment(errors, "identical file")
         else:
-            counters = log.error(counters, "unique file", pn1 + '\\' + fn)
+            log.error(errors, "unique file", srcfpn, silent=True)
+            cmdfile.command(srcfpn, pn2)
 
     # look for unique pn2 files
     for fn in crcs2:
+        destfpn = pn2 + '\\' + fn
         if fn not in crcs1:
-            counters = log.error(counters, "unique file", pn2 + '\\' + fn)
+            srcpn = pn1 + '\\' + fn
+            log.error(errors, "unique file", destfpn, silent=True)
+            cmdfile.command(destfpn, pn1)
 
     # Recursively look through subfolders in pn1
     dirs1 = []
+    folders = 0
     for pn in glob.glob(glob.escape(pn1)+'/*'):
         rootp, fn = os.path.split(pn)
         if os.path.isdir(pn):
+            folders += 1
+            display_update(folders, "folders")
             if os.path.isdir(pn2+'\\'+fn):
+                # This handles folders found in both trees
                 dirs1 += [fn]
-                compare_folders(log, pn, pn2+'\\'+fn)
+                compare_folders(log, pn, pn2+'\\'+fn, cmdfile)
             else:
-                counters = log.error(counters, "unique folder", pn)
+                log.error(errors, "unique folder", pn)
 
-    # Recursively look through subfolders in pn2
+    # look for unique subfolders in pn2, this need not be recursive
     for pn in glob.glob(glob.escape(pn2)+'/*'):
-        rootp, fn = os.path.split(pn)
-        if os.path.isdir(pn) and fn not in dirs1:
-            counters = log.error(counters, "unique folder", pn)
-
+        if os.path.isdir(pn):
+            rootp, fn = os.path.split(pn)
+            if fn not in dirs1:
+                log.error(errors, "unique folder", pn)
 
 if __name__ == '__main__':
     accumulate = False  # Until a switch is processed
     crcs = []
+    display_update(0, "Reset")
 
     # (Re)Create the pathnames (and files) used by this programe
     file1 = JsonFile("Compare.Crcs1.json")
@@ -125,7 +137,6 @@ if __name__ == '__main__':
     file2 = JsonFile("Compare.Crcs2.json")
     file2crcs = None
     log = logging("CompareCRCs.txt")
-    cmdfile = CmdFile("CompareCRCs.cmd")
 
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:
@@ -158,7 +169,7 @@ if __name__ == '__main__':
             else:
                 pathname = os.path.abspath(os.path.expandvars(arg))
                 if not os.path.isdir(pathname):
-                    log.error(counters, "does not exist", pathname)
+                    log.error(errors, "does not exist", pathname)
                     help()
                 if len(crcs) < 2:
                     crcs += [{"pathname": pathname}]
@@ -169,11 +180,13 @@ if __name__ == '__main__':
         help()
 
     if accumulate:
+        cmdfile = CmdFile("CompareCRCs.cmd")
         compare_dictionaries(log, crcs[0], crcs[1], cmdfile)
         log.msg("\nFindCRCs dictionaries complete.")
-        log.counters(counters)
+        log.counters(errors)
 
     else:
-        compare_folders(log, crcs[0]["pathname"], crcs[1]["pathname"])
+        cmdfile = CmdFile("CompareCRCs.cmd", prefixes=["replace /a",""])
+        compare_folders(log, crcs[0]["pathname"], crcs[1]["pathname"], cmdfile)
         log.msg("\nFindCRCs folder comparison complete.")
-        log.counters(counters)
+        log.counters(errors)
