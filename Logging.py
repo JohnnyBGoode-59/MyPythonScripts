@@ -34,7 +34,7 @@ def display_update(number, name, reset=False):
     else:
         test = time.time()
         if (test - now) > 5:  # Seconds between updates
-            print("{:,} {}".format(number, name), end='\r')
+            print("{:,} {}s".format(number, name), end='\r')
             now = test
 
 class logging:
@@ -58,13 +58,14 @@ class logging:
         if clean:
             self.remove()
 
-    def msg(self, message):
+    def msg(self, message, silent=False):
         """ Log a simple message """
         log = open(self.logfile, 'a')
         log.write(message + '\n')
         log.close()
-        print(message)
-        now = time.time()
+        if not silent:
+            print(message)
+            now = time.time()
 
     def nickname(self, pn):
         """ Shorten really long names when all I really need is the basics. """
@@ -72,7 +73,32 @@ class logging:
             return pn[0:self.style[1]] + "[...]" + pn[-self.style[2]:]
         return pn
 
-    def error(self, counters, err, pathname=None):
+    def command(self, prefix1, pn1, prefix2, pn2, silent=False):
+        """ Log a command with two pathnames included """
+        log = open(self.logfile, 'a')
+        log.write('{} "{}" {} "{}"\n'.format(prefix1, pn1, prefix2, pn2))
+        log.close()
+        if not silent:
+            print('{} "{}" {} "{}"'.format(prefix1, self.nickname(pn1), prefix2, self.nickname(pn2)))
+            now = time.time()
+
+    def count(self, counters, name, pathname=None, silent=False):
+        """ Log message that includes a counter and possible a pathname """
+        fullmsg = name + '\n'
+        shortmsg = name
+        if pathname != None:
+            fullmsg = '"' + pathname + '": ' + fullmsg
+            shortmsg = self.nickname(pathname) + ": " + shortmsg
+        log = open(self.logfile, 'a')
+        log.write(fullmsg)
+        log.close()
+        if not silent:
+            print(shortmsg)
+            now = time.time()
+        self.increment(counters, name)
+        return counters
+
+    def error(self, counters, err, pathname=None, silent=False):
         """ Log an error that may include a pathname """
         fullmsg = err + '\n'
         shortmsg = err + ' (error)'
@@ -82,9 +108,10 @@ class logging:
         log = open(self.logfile, 'a')
         log.write(fullmsg)
         log.close()
-        print(shortmsg)
+        if not silent:
+            print(shortmsg)
+            now = time.time()
         self.increment(counters, err)
-        now = time.time()
         return counters
 
     def increment(self, counters, name):
