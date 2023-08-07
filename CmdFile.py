@@ -10,14 +10,14 @@
 #-------------------------------------------------------------------------------
 
 import os
+from Logging import logging
 
 class CmdFile:
     """ Provides a simple class to create command files. """
-    pathname = None
-    verbose = False
-    prefix = ""
+    log = None
+    prefixes = None
 
-    def __init__(self, filename, prefix=None, verbose=False, clean=False):
+    def __init__(self, filename, clean=True, prefixes=["Del ", "\n@Rem"], style=[32, 38]):
         """ filename can be a fully qualifed pathname or simple filename.
             If a path is supplied, it will be used. Otherwise the TEMP
             environment variable will be used to construct the pathname.
@@ -26,53 +26,46 @@ class CmdFile:
 
             If desired, print messages will occur to detail actions.
         """
-        rootp, fn = os.path.split(filename)
-        if rootp == '':
-            rootp = os.environ.get('TEMP')
-            if rootp is None:
-                raise Exception("TEMP environment variable is not defined")
-
-        self.pathname = os.path.abspath(rootp + '\\' + fn)
-        self.verbose = verbose
-        self.prefix = prefix
-        if self.prefix != None:
-            self.verbose = True
+        self.log = logging(filename, clean=False, style=style)
+        self.prefixes = prefixes
         if clean:
             self.remove()
 
-    def report(self, msg):
-        """ print a message if verbose was enabled """
-        if self.verbose:
-            print("{}: {}".format(self.prefix, msg))
+    def remark(self, line):
+        """ Add a remark to the command file """
+        self.log.msg("Rem "+line)
 
-    def write(self, line):
-        """ Add a line to the command file """
-        try:
-            with open(self.pathname, 'a') as cf:
-                cf.write(self.prefix + line + '\n')
-            self.report(line)
-        except:
-            raise Exception("{} could not be written".format(self.pathname))
+    def command(self, pn1, pn2, prefixes=None):
+        """ Add two pathnames to the command file using predefined prefixes for each pathname """
+        if prefixes == None:
+            prefixes = self.prefixes
+        self.log.msg('{} "{}" {} "{}"'.format(prefixes[0], pn1, prefixes[1], pn2))
 
     def remove(self):
         """ Remove any file previously created using this instance """
-        try:
-            os.remove(self.pathname)
-            self.report("{} removed".format(self.pathname))
-        except:
-            pass # it is not noteworthy that a file to be deleted did not exist
+        if os.path.exists(self.log.logfile):
+            self.log.remove()
 
 if __name__ == '__main__':
     """ Test this class """
-    testfile = "CmdFile.test"
-    test = CmdFile(testfile, "Test1 ", clean=True)
-    test.write("line1:" + testfile)
-    test.write("line2:" + testfile)
-    print("---------")
-    with open(test.pathname) as lt:
-        print(lt.read())
-    print("---------")
+    testfile = "test.cmd"
+    test = CmdFile(testfile)
+    test.remark("This is just a remark added to the logfile: " + testfile)
+    test.command(os.getcwd()+"\\local.file",".\\another.file")
 
-    # Test messages
-    test = CmdFile(testfile, clean=True, verbose=True, prefix="Test2")
-    test = CmdFile(testfile, clean=True)
+    print("----start----")
+    with open(test.log.logfile) as lt:
+        print(lt.read())
+    print("----end----")
+
+    # Prefixes
+    testfile = "test.cmd"
+    test = CmdFile(testfile, False, ["copy", ""])
+    test.remark("Adding more to the same file")
+    test.command("c:\\root.file", "\\\\network\\pathname")
+    test.command("c:\\root.file", "\\\\network\\pathname", ["fc",""])
+
+    print("----start----")
+    with open(test.log.logfile) as lt:
+        print(lt.read())
+    print("----end----")
