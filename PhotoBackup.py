@@ -9,83 +9,83 @@
 # Licence:     GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
 #-------------------------------------------------------------------------------
 
-archive_pictures = "\\Pictures" # the default destination for photo archives
-picture_exts = ['.jpg', '.jpeg',  '.heic',  '.png']
-
-archive_videos = "\\Movies" # the default destination for movie archives
-video_exts = ['.avi',  '.mpg',  '.mp3',  '.mp4', '.mov',  '.3gp']
-
-months = [ "01Jan", "02Feb", "03Mar", "04Apr", "05May", "06Jun",
-            "07Jul", "08Aug", "09Sep", "10Oct", "11Nov", "12Dec" ]
-
-found = 0       # Count files found
-archived = 0    # Count files archived
-not_archived = 0 # Count files that could not be archived
-removed = 0     # Count files removed due to matching CRC
-filespec = "*"  # which files get archived?
-
 import glob, re, os, sys
 from crc32 import crc32
 from EXIF_Dating import GetExifDate, GetFileDate, GetExifDimensions
 from PyBackup import logging, ReadCrcs, recursive_mkdir, display_update
 
-log = None  # A logging class, hopefully
+archive_pictures = "\\Pictures" # the default destination for photo archives
+picture_exts = ['.jpg', '.jpeg',  '.heic',  '.png']
 
-def MyLog(str):
-    """ Log a msg """
-    global log
-    if log != None:
-        log.msg(str)
+archive_videos = "\\Movies" # the default destination for movie archives
+video_exts = ['.avi',  '.mpg',  '.mp3',  '.mp4', '.mov',  '.3gp', '.m4v']
 
-def remove_duplicate(src, dest):
+months = [ "01Jan", "02Feb", "03Mar", "04Apr", "05May", "06Jun",
+            "07Jul", "08Aug", "09Sep", "10Oct", "11Nov", "12Dec" ]
+
+filespec = "*"  # which files get archived?
+errors = {}
+stats = {}
+log = None      # logging class instantiations
+record = None
+
+def help():
+    print("""
+    Photo-Backup [-r] [filespec]
+    -r  recursively process folders
+
+    This program moves files to pictures and videos folders based upon the
+    date they were recorded. The Pictures and Videos environment variables
+    can be modified to change the root folders used to archive files.""")
+    exit()
+
+def remove_file(src, dest, reason):
     """ Remove a source file that does not need to be backed up """
-    global archived, removed, not_archived
+    global log, stats, errors
     try:
         # Don't try to remove a file when the new pathname is identical
         if src.lower() == dest.lower():
             return
         os.remove(src)
-        print("{} removed as a duplicate of {}".format(src, dest))
-        removed += 1
+        log.error(errors, "removed {} file".format(reason), src)
+        log.count(stats, "original file", dest)
     except:
-        MyLog("exception: {} cannot be removed ".format(src))
-        not_archived += 1
+        log.error(errors, "remove error", src)
 
 def replace_destination(src, dest, reason):
     """ Replace a destination file with a source file for a specified reason """
-    global archived, not_archived
-    try:
-        # Don't try to replqace a file when the new pathname is identical
-        if src.lower() == dest.lower():
-            return
-        os.remove(dest)
-    except:
-        MyLog("{}: cannot remove".format(dest))
-        not_archived += 1
+    global log, stats, errors, record
+
+    # Don't try to replace a file when the new pathname is identical
+    if src.lower() == dest.lower():
         return
     try:
-        # Don't try to rename a file when the new pathname is identical
-        if src.lower() == dest.lower():
-            return
-        os.rename(src, dest)
-        archived += 1
-        print("{} replaced {}".format(dest, reason))
+        if os.path.exists(dest):
+            os.remove(dest)
+            log.count(stats, "replaced {} file".format(reason), dest)
     except:
-        MyLog("{} cannot rename to {}".format(src, dest))
-        not_archived += 1
+        log.error(errors, "remove error", src)
+        return
+    try:
+        os.rename(src, dest)
+        record.count(stats, "archived file", dest)
+    except:
+        log.error(errors, "rename error", src)
 
 def archive(pn, recursive):
     """ Archive one picture or movie in it's proper place """
     global archive_pictures, picture_exts
     global archive_videos, video_exts
-    global months, found, archived, not_archived, removed
+    global months
+    global log, stats, errors
 
     # Only archive some types of files
     rootp, ext = os.path.splitext(pn)
     rootp, fn = os.path.split(pn)
     if ext.lower() not in picture_exts + video_exts:
+        log.count(stats, "ignored file", pn)
         return
-    found = found + 1
+    record.increment(stats, "file")
 
     # Decide where to archive the file
     if ext.lower() in picture_exts:
@@ -98,8 +98,7 @@ def archive(pn, recursive):
     else:
         date = None
     if date is None:
-        MyLog("{}: No archive date".format(pn))
-        not_archived += 1
+        log.error(errors, "undated (not archived) file", pn)
         return
 
     # Archive pn using computed date
@@ -116,22 +115,21 @@ def archive(pn, recursive):
     recursive_mkdir(folder)
 
     # Read the CRCs at the destination.
-    # If a duplicate CRC exists then delete this file
+    # If a duplicate CRC exists then delete the source file and done
     crc = crc32(pn)
     crcs, last_modified = ReadCrcs(log, folder+"\\crc.csv")
     for crcfn in crcs:
         if crc == crcs[crcfn]:
-            remove_duplicate(pn, folder+'\\'+crcfn)
+            remove_file(pn, folder+'\\'+crcfn, "duplicate")
             return
 
-    # Try to archive a file simply by renaming it
+    # Try to archive a file simply by renaming it and done
+    # That should work if the destination flie is not currently present
     if not os.path.exists(backup_pn):
-        print("{} archived to {}".format(pn, folder))
-        os.rename(pn, backup_pn)
-        archived = archived + 1
+        replace_destination(pn, backup_pn, "new")
         return
 
-    # Just because the files are named the same yet different does not mean we are done.
+    # Just because two identically named different files exist does not mean we are done.
 
     # Replace the backup files with higher resolution files
     # Remove lower resolution files
@@ -140,9 +138,9 @@ def archive(pn, recursive):
     update = False
     if src_dim is not None and dest_dim is not None:
         if dest_dim[0] < src_dim[0] and dest_dim[1] < src_dim[1]:
-            replace_destination(pn, backup_pn, "Improve resolution")
+            replace_destination(pn, backup_pn, "low res")
         else:
-            remove_duplicate(pn, backup_pn)
+            remove_file(pn, backup_pn, "low res")
         return
 
     # Replace files with no exif date if a date is now available
@@ -152,8 +150,7 @@ def archive(pn, recursive):
         replace_destination(pn, backup_pn, "add date")
         return
 
-    print("{} could not be archived to {}".format(pn, folder))
-    not_archived = not_archived + 1
+    log.count(errors, "unarchived file", pn)
     return
 
 def getfolder(sourcep, filetype):
@@ -183,11 +180,12 @@ def getfolder(sourcep, filetype):
 
 def main(pn, recursive):
     """ Process files and possibly folders starting with a folder """
-    global found
+    found = 0
 
     # Process just the files in a folder
     for fn in glob.glob(glob.escape(pn) + '\\' + filespec):
-        display_update(found)
+        found += 1
+        display_update(found, "found")
         if os.path.isfile(fn):
             archive(fn, recursive)
 
@@ -197,19 +195,15 @@ def main(pn, recursive):
         print("{}: scanning".format(pn))
         display_update(found, True)
         for pn in glob.glob(glob.escape(pn) + "\\*"):
+            found += 1
+            display_update(found, "found")
             if os.path.isdir(pn):
                 main(pn, recursive)
 
-def help():
-    print("Photo-Backup [-r] [filespec]")
-    print("\nThis program moves files to pictures and videos folders based")
-    print("upon the date they were recorded.")
-    print("\n-r\trecursively process folders")
-    exit()
-
 if __name__ == '__main__':
     # Create a logfile
-    log = logging("Photo-Backup.log.txt")
+    log = logging("Photo-Backup.errors.txt")
+    record = logging("Photo-Backup.log.txt")    # keep success out of the error log
 
     # Process the command line arguments
     folder = os.getcwd();   # <path>: use a path other than the current working directory
@@ -223,16 +217,22 @@ if __name__ == '__main__':
         elif os.path.isdir(arg):
             folder = arg
         else:
-            folder, filespec = os.path.split(arg)
+            folder, filespec = os.path.split(os.path.expandvars(arg))
             folder = os.path.abspath(folder)
+            if not os.path.isdir(folder):
+                log.error(errors, "not a folder", folder)
+                help()
 
     # Define the alternative locations to archive pictures and movies
     archive_pictures = getfolder(folder, 'Pictures')
     archive_videos = getfolder(folder, 'Videos')
 
     # Find and process folders
-    display_update(found, True)
+    display_update(0, True)
     main(folder, recursive)
 
     # Print the result
-    print("Found {:,}, archived {:,}, removed {:,}, {:,} could not be archived".format(found, archived, removed, not_archived))
+    log.msg("\nPhotoBackup complete")
+    stats.pop('file')
+    log.counters(stats)
+    log.counters(errors)
