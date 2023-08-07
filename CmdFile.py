@@ -31,15 +31,15 @@ class CmdFile:
         if clean:
             self.remove()
 
-    def remark(self, line, prefix="Rem "):
+    def remark(self, line, prefix="Rem ", silent=False):
         """ Add a remark to the command file """
-        self.log.msg(prefix+line)
+        self.log.msg(prefix+line, silent)
 
-    def command(self, pn1, pn2, prefixes=None):
+    def command(self, pn1, pn2, prefixes=None, silent=False):
         """ Add two pathnames to the command file using predefined prefixes for each pathname """
         if prefixes == None:
             prefixes = self.prefixes
-        self.log.msg('{} "{}" {} "{}"'.format(prefixes[0], pn1, prefixes[1], pn2))
+        self.log.command(prefixes[0], pn1, prefixes[1], pn2, silent)
 
     def remove(self):
         """ Remove any file previously created using this instance """
