@@ -314,7 +314,9 @@ if __name__ == '__main__':
         # Verify CRCs for each folder listed
         if sys.argv[1][1] in ['u', 'U', 'v', 'V']:
             for pn in sys.argv[2:]:
-                verify(log, pn, sys.argv[1][1] in ['u', 'U'])
+                pathname = os.path.abspath(os.path.expandvars(pn))
+                update = sys.argv[1][1] in ['u', 'U']   # True or False
+                verify(log, pathname, update)
             display_summary(log, "Verify", start)
             exit()  # The rest below is specific to backup operations
 
@@ -326,7 +328,9 @@ if __name__ == '__main__':
     # PyBackup source destination
     if len(sys.argv) == 3:
         """ Backup one folder """
-        main(log, sys.argv[1], sys.argv[2])
+        srcp = os.path.abspath(os.path.expandvars(sys.argv[1]))
+        destp = os.path.abspath(os.path.expandvars(sys.argv[2]))
+        main(log, srcp, destp)
         display_summary(log, "Backup", start)
         exit()
 
@@ -362,7 +366,7 @@ if __name__ == '__main__':
         if line[0] != '#':
             if line[-1] == '\n':
                 line = line[:-1]
-            source, dest = line.split(',')
-            main(log, source, dest)
+            source, dest = line.split(',')  # pathnames containing commas would fail
+            main(log, os.path.abspath(source), os.path.abspath(dest))
     f.close()
     display_summary(log, "Backup", start)
