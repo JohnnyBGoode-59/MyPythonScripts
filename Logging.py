@@ -73,13 +73,19 @@ class logging:
             return pn[0:self.style[1]] + "[...]" + pn[-self.style[2]:]
         return pn
 
-    def command(self, prefix1, pn1, prefix2, pn2, silent=False):
-        """ Log a command with two pathnames included """
+    def command(self, prefix1, pn1, prefix2=None, pn2=None, silent=False):
+        """ Log a command with one or two pathnames included """
+        cmd = '{} "{}" '.format(prefix1, pn1)
+        if prefix2 != None:
+            cmd += prefix2
+        if pn2 != None:
+            cmd += ' "{}"'.format(pn2)
+
         log = open(self.logfile, 'a')
-        log.write('{} "{}" {} "{}"\n'.format(prefix1, pn1, prefix2, pn2))
+        log.write(cmd + '\n')
         log.close()
         if not silent:
-            print('{} "{}" {} "{}"'.format(prefix1, self.nickname(pn1), prefix2, self.nickname(pn2)))
+            print(cmd)
             now = time.time()
 
     def count(self, counters, name, pathname=None, silent=False):

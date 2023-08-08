@@ -35,11 +35,14 @@ class CmdFile:
         """ Add a remark to the command file """
         self.log.msg(prefix+line, silent)
 
-    def command(self, pn1, pn2, prefixes=None, silent=False):
+    def command(self, pn1, pn2=None, prefixes=None, silent=False):
         """ Add two pathnames to the command file using predefined prefixes for each pathname """
         if prefixes == None:
             prefixes = self.prefixes
-        self.log.command(prefixes[0], pn1, prefixes[1], pn2, silent)
+        if pn2 != None:
+            self.log.command(prefixes[0], pn1, prefixes[1], pn2, silent)
+        else:
+            self.log.command(prefixes[0], pn1, silent=silent)
 
     def remove(self):
         """ Remove any file previously created using this instance """
