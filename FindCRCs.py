@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Name: Find-CRCs
+# Name: FindCRCs
 # Purpose: Find matching crc files across many crc files.
 #   This program can be used to find and remove duplicate files.
 #
@@ -16,7 +16,7 @@ from Logging import logging, timespent
 from CmdFile import CmdFile
 
 crc_filename = "crc.csv"
-cleanscript_filename = "remove-duplicates.cmd"
+cleanscript_filename = "RemoveDuplicates.cmd"
 json_filename = "FindCRCs.json"
 
 found = 0
@@ -43,12 +43,12 @@ def help(cmdfile):
 
 def record_duplicate(cmdfile, original, duplicate):
     """ Log and record a script that can be used to remove duplicate files. """
-    global cleanscript, duplicates, order_switched
+    global duplicates, order_switched
 
     # Ignore calls with the exact same pathname for both parameters
     original = os.path.abspath(original.lower())
     duplicate = os.path.abspath(duplicate.lower())
-    if  original == duplicate:
+    if original == duplicate:
         return
 
     # Sometimes the copies are really the ones to keep.
@@ -142,5 +142,5 @@ if __name__ == '__main__':
         for folder in processed:
             pybackup_update += ' ' + folder
         cmdfile.remark(pybackup_update, "PyBackup -u ")
-        print("\n{:,} Duplicates found.\nremove-duplicates ?".format(duplicates))
+        print("\n{:,} Duplicates found.\n{} ?".format(duplicates, cleanscript_filename))
     print("{:,} CRCs found. Completed in {}".format(found, timespent()))

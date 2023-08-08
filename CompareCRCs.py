@@ -78,7 +78,7 @@ def compare_dictionaries(log, crcs1, crcs2, cmdfile):
 def compare_folders(log, pn1, pn2, cmdfile):
     """ Compare crc files in two folder """
     global errors
-    print('"{}": comparing'.format(log.nickname(pn1)))
+    print('"{}": comparing, errors:{}'.format(log.nickname(pn1), log.sum(errors)))
     display_update(0, "", True)
     crcs1, lm1 = ReadCrcs(log, pn1)
     crcs2, lm2 = ReadCrcs(log, pn2)
@@ -179,14 +179,24 @@ if __name__ == '__main__':
     if len(crcs) < 2:
         help()
 
+    # Rebuild the command line
+    rootp, cmdline = os.path.split(sys.argv[0])
+    for arg in sys.argv[1:]:
+        cmdline += ' ' + arg
+
     if accumulate:
         cmdfile = CmdFile("CompareCRCs.cmd")
+        cmdfile.remark("{}".format(os.getcwd() + "> " + cmdline), silent=True)
+        cmdfile.remark("{} removes duplicate files.".format(cmdfile.log.logfile), silent=True)
+        cmdfile.remark("Pick which files to remove.", silent=True)
         compare_dictionaries(log, crcs[0], crcs[1], cmdfile)
         log.msg("\nFindCRCs dictionaries complete.")
         log.counters(errors)
 
     else:
         cmdfile = CmdFile("CompareCRCs.cmd", prefixes=["replace /a",""])
+        cmdfile.remark("{}".format(os.getcwd() + "> " + cmdline), silent=True)
+        cmdfile.remark("{} adds missing files using replace /a.".format(cmdfile.log.logfile), silent=True)
         compare_folders(log, crcs[0]["pathname"], crcs[1]["pathname"], cmdfile)
         log.msg("\nFindCRCs folder comparison complete.")
         log.counters(errors)
