@@ -14,7 +14,6 @@ from shutil import copyfile
 from crc32 import crc32
 from Logging import logging, display_update, timespent
 
-ini_filename = "backup.ini"
 crc_filename = "crc.csv"        # the control file found in every folder
 
 szFolder = "folder"
@@ -169,7 +168,6 @@ def backup(log, src, dst):
     """ backup one source file """
     global copied, stats, errors, szCopiedFile
     rootp, srcfn = os.path.split(src)
-    print("BC: {}".format(log.nickname(dst)))   # Backup Copy
     try:
         copyfile(src, dst)
     except:
@@ -308,6 +306,9 @@ if __name__ == '__main__':
     log = logging("PyBackup.log.txt")
 
     # First look for command line switches
+    # PyBackup -?
+    # PyBackup -u pathname
+    # PyBackup -v pathname
     if len(sys.argv) >= 2 and sys.argv[1][0] in ['-', '/']:
 
         # PyBackup -v [folders]
@@ -327,35 +328,34 @@ if __name__ == '__main__':
     # If a source and destination is specified on the command line, backup one folder
     # PyBackup source destination
     if len(sys.argv) == 3:
-        """ Backup one folder """
+        """ A source and destination was provided. Backup one folder """
         srcp = os.path.abspath(os.path.expandvars(sys.argv[1]))
         destp = os.path.abspath(os.path.expandvars(sys.argv[2]))
         main(log, srcp, destp)
         display_summary(log, "Backup", start)
         exit()
 
-    elif len(sys.argv) != 1:
-        help()
+    # PyBackup inifile
+    elif len(sys.argv) == 2:
+        ini_filename = os.path.abspath(os.path.expandvars(sys.argv[1]))
+        if not os.path.isfile(ini_filename):
+            help()
 
-    """ No command line parameters were provided.
-        Use an ini file that identifies source and destination folders.
+    # PyBackup
+    else:
+        # Switch to the %USERPROFILE% folder where Backup.ini should reside.
+        userprofile = os.environ.get('USERPROFILE')
+        if userprofile is None:
+            print("USERPROFILE is not defined as an environment variable")
+            exit()
+        os.chdir(userprofile)
+        ini_filename = "backup.ini"
+
+    """ Use an ini file that identifies source and destination folders.
         Copy all files in the source that do not exist in the destination.
         Skip all files with matching CRCs in both locations.
-        Create a batch file that will copy newer files over older files,
-        but do not run that batch file.
-        Advanced ideas:
-            1. In the same folder as a file, save the CRC values for each file.
-            2. Use those values any time the CRC file is newer than the file.
     """
-
-    # Switch to the %USERPROFILE% folder where Backup.ini should reside.
-    userprofile = os.environ.get('USERPROFILE')
-    if userprofile is None:
-        print("USERPROFILE is not defined as an environment variable")
-        exit()
-
     try:
-        os.chdir(userprofile)
         f = open(ini_filename)
     except:
         print("{} not found", ini_filename)
