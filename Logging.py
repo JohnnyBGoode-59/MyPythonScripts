@@ -9,19 +9,18 @@
 # Licence:     GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
 #-------------------------------------------------------------------------------
 
-import os, time
+import os, time, sys
 
-autostart = None
 now = None
 
 def timespent(start=None):
     """ Returns time spent between the specified start time and now, in a printable string. """
-    global autostart
+    global now
     if start!=None:
-        autostart=start
-    elif autostart==None:
-        autostart=time.time()
-    elapsed = time.gmtime(time.time()-autostart)
+        now=start
+    elif now==None:
+        now=time.time()
+    elapsed = time.gmtime(time.time()-now)
     # Add the number of hours in a day for every day since the start time
     hours = elapsed.tm_hour + (elapsed.tm_yday-1) * 24
     return "%02d:%02d:%02d" % (hours, elapsed.tm_min, elapsed.tm_sec)
@@ -39,14 +38,21 @@ def display_update(number, name, reset=False):
 
 class logging:
     """ Provides a simple class to log messages to a file. """
-    global now
     logfile = None
     style = None    # [ length, prefix, postfix ]
 
-    def __init__(self, pn, clean=True, style=[32, 38]):
+    def __init__(self, pn=None, clean=True, style=[32, 38]):
         """ pn can be a fully qualifed pathname or relative pathname.
             clean defaults to True, meaning that the logfile will be removed.
         """
+        global now
+        if now==None:
+            now=time.time()
+        if pn==None:
+            rootp, fn = os.path.split(sys.argv[0])
+            fn, ext = os.path.splitext(fn)
+            pn = fn + '.txt'
+
         rootp, fn = os.path.split(pn)
         if rootp == '':
             rootp = os.environ.get('TEMP')
@@ -60,6 +66,7 @@ class logging:
 
     def msg(self, message, silent=False):
         """ Log a simple message """
+        global now
         log = open(self.logfile, 'a')
         log.write(message + '\n')
         log.close()
@@ -75,6 +82,7 @@ class logging:
 
     def command(self, prefix1, pn1, prefix2=None, pn2=None, silent=False):
         """ Log a command with one or two pathnames included """
+        global now
         cmd = '{} "{}" '.format(prefix1, pn1)
         if prefix2 != None:
             cmd += prefix2
@@ -106,6 +114,7 @@ class logging:
 
     def error(self, counters, err, pathname=None, silent=False):
         """ Log an error that may include a pathname """
+        global now
         fullmsg = err + '\n'
         shortmsg = err + ' (error)'
         if pathname != None:
@@ -154,17 +163,17 @@ if __name__ == '__main__':
     """ Test this class """
     counters = {}
     timespent()
-    testfile = "logfile.txt"
+    testfile = "Logging.txt"
     log = logging(testfile, style=[10,12])
     log.msg("This is a simple message")
-    log.error(counters, "simple error")
+    log.error(counters, "simple counter")
     time.sleep(1)
     log.increment(counters, "delay")
     time.sleep(1)
     log.increment(counters, "delay")
-    log.error(counters, "simple error", log.logfile)
-    log = logging(testfile, clean=False)
-    log.error(counters, "another error", log.logfile)
+    log.error(counters, "simple counter", log.logfile)
+    log = logging(clean=False)
+    log.error(counters, "additional error", log.logfile)
     time.sleep(1)
     log.increment(counters, "delay")
     log.counter(123, "stick")
@@ -174,6 +183,6 @@ if __name__ == '__main__':
     for l in range(17):
         time.sleep(1)
         log.increment(counters, "delay")
-        display_update(l,"loops")
+        display_update(l, "loop")
     log.counters(counters)
     log.msg("Completed in {}".format(timespent()))
