@@ -10,23 +10,34 @@
 # Licence:     GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
 #-------------------------------------------------------------------------------
 
-found = 0
-renamed = 0
-dated = 0
-undated = 0
-well_named = 0
+import glob, re, os, sys, time
+from EXIF_Dating import GetExifDate, SetExifDate, GetFileDate
+from Logging import logging, display_update
+
+szFile = "file"
+stats = {szFile:0}
+errors = {}
+log = None
+
 filespec = '*'              # can be changed by the command prompt
 use_modified_date = False   # -m: reset the date based upon the file date
-picture_exts = ['.jpg', '.jpeg',  '.heic',  '.png']
+picture_exts = ['.jpg', '.jpeg',  '.heic', '.png']
 
-import glob, re, os, sys, time
+def help():
+    print("""
+    PhotoRenamer [options] [filespec]
+    Rename files to include a datestamp in the filename.
+    When add exif date data when it does not exist.
 
-from EXIF_Dating import GetExifDate, SetExifDate, GetFileDate
+    -s  Strip any existing date found in the current filename
+    -f  ignore existing exif data and use the date found in the Filename instead
+    -m  use the Modified date if no other date is available
+    -r  Recursively process subfolders""")
 
-def rename(pn, strip, reset, recursive):
+def rename(pn, strip, reset):
     """ Rename one file """
-    global found, renamed, dated, undated, well_named
     global use_modified_date, picture_exts
+    global log, stats, errors, szFile
 
     # Just in case...
     if os.path.isdir(pn):
@@ -40,7 +51,8 @@ def rename(pn, strip, reset, recursive):
     # Avoid processing some files
     if ext.lower() in [".db", ".csv"]:
         return
-    found = found + 1
+    log.increment(stats, szFile)
+    display_update(stats[szFile], szFile)
 
     if not strip:
         # Try to get both EXIF date and File date
@@ -69,8 +81,7 @@ def rename(pn, strip, reset, recursive):
                                 ("0"+str(mts.tm_min))[-2:],
                                 ("0"+str(mts.tm_sec))[-2:] ]
                 else:
-                    undated = undated + 1
-                    print("{} has no date".format(pn))
+                    log.error(errors, "undated file", pn)
                     return
 
             # but a file date is available
@@ -79,23 +90,18 @@ def rename(pn, strip, reset, recursive):
                 try:
                     SetExifDate(pn, file_date)
                     check_date = GetExifDate(pn)
-                    if check_date is not None:
-                        print("{}: added Exif date".format(pn))
-                        dated = dated + 1
+                    if check_date is not None and check_date[0:3] == file_date[0:3]:
+                        log.count(stats, "added Exif date", pn)
                     else:
-                        undated = undated + 1
-                        print("{}: cannot add Exif date".format(pn))
+                        log.count(errors, "failed adding Exif date", pn)
                 except:
-                    exif_date = None
-                    undated = undated + 1
-                    print("{}: SetExifDate exception".format(pn))
+                    log.count(errors, "SetExifDate exception", pn)
 
         # If the two dates match, do nothing
         if true_file_date is not None and exif_date is not None:
             # Just compare dates, not times
             if (exif_date[:3] == true_file_date[:3]):
-                # print("{} is well named".format(pn))
-                well_named = well_named + 1
+                log.count(stats, "well named and dated picture", pn, silent=True)
                 return
 
         # Use the file date if no exif date is available
@@ -110,7 +116,7 @@ def rename(pn, strip, reset, recursive):
 
         # Don't rename a file that is already renamed (this should be redundant now)
         if fn[0:len(prefix)] == prefix:
-            print("{} is already renamed".format(fn))
+            log.count(stats, "well named file", pn, silent=True)
             return
 
         # Remove any previous date prefix
@@ -126,7 +132,7 @@ def rename(pn, strip, reset, recursive):
                 else:
                     m = re.search("^([\-\._~ ])*(.*)", fn)
                     fn = m.group(2)
-                #dbg print('Truncated filename: {}'.format(fn))
+                log.count(stats, "truncated filename", fn, silent=True)
         else:
             # Strip any a prefix that has just the year
             m = re.search("^(19|20)[0-9][0-9]"+sep[:-1]+"(.*)", fn)
@@ -159,14 +165,13 @@ def rename(pn, strip, reset, recursive):
             continue
         try:
             os.rename(pn, newname)
-            renamed = renamed + 1
-            print("{} renamed".format(newname))
+            log.count(stats, "renamed file", newname)
         except:
-            print("{} cannot be renamed {}".format(pn, newname))
+            log.error(errors, "rename failure", newname, silent=True)
         break
 
     if i > 9:
-        print("{} cannot be renamed {}".format(pn, newname))
+        log.error(errors, "rename limit failure", newname)
 
 def main(pn, strip, reset, recursive):
     """ Rename files in a folder, possibly recursively """
@@ -175,7 +180,7 @@ def main(pn, strip, reset, recursive):
     # Process files in a folder with no recursion
     for fn in glob.glob(glob.escape(pn) + '\\' + filespec):
         if os.path.isfile(fn):
-            rename(fn, strip, reset, recursive)
+            rename(fn, strip, reset)
 
     # Process folders recursively, when requested
     if recursive:
@@ -186,6 +191,7 @@ def main(pn, strip, reset, recursive):
 
 if __name__ == '__main__':
     """ Process command line arguments """
+    log = logging()
     pn = os.getcwd();   # <path>: use a path other than the current working directory
     strip = False       # -s: simply strip any date in the current filenames
     reset = False       # -f: ignore the EXIF date and use the filename date instead
@@ -203,20 +209,20 @@ if __name__ == '__main__':
             elif arg[1].lower() == 'm':
                 use_modified_date = True
             else:
-                print(  "-s Strip filename and EXIF date information\n"
-                        "-f use the Filename to reset the EXIF date\n"
-                        "-r Recursively search folders\n"
-                        "-m use the file Modification date to reset the EXIF date")
-                exit()
+                help()
         else:
-            pn = os.path.abspath(arg)
+            pn = os.path.abspath(os.path.expandvars(arg))
             if not os.path.isdir(pn):
                 pn, filespec = os.path.split(pn)
+                if not os.path.isdir(pn):
+                    log.error(errors, "folder error", pn)
+                    help()
 
-    # -d is ignored if -s is also supplied
+    # -f is ignored if -s is also supplied
+    # one cannot strip date info from the filename and also use it
     if strip:
         reset = False
 
     main(pn, strip, reset, recursive) # rename all files in a folder
-    print("Found {:,}, well named {:,}, renamed {:,}, added dates to {:,}, failed to date {:,}".format(\
-        found, well_named, renamed, dated, undated))
+    log.counters(stats)
+    log.counters(errors)
