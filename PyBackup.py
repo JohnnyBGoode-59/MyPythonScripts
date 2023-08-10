@@ -141,7 +141,7 @@ def verify(log, source, update=False):
                     and source_modified != None \
                     and os.path.getmtime(pn) <= source_modified:
                     continue;   # -u: skip old files
-                print("{}: checking".format(log.nickname(pn)))
+                print("{}: hashing".format(log.nickname(pn)))
                 display_update(stats[szFile], szFile)
                 try:
                     crc = crc32(pn)
@@ -304,6 +304,12 @@ if __name__ == '__main__':
 
     # (Re)Create a logfile used for severe errors
     log = logging("PyBackup.log.txt")
+
+    # Rebuild the command line and add it to the log
+    rootp, cmdline = os.path.split(sys.argv[0])
+    for arg in sys.argv[1:]:
+        cmdline += ' ' + arg
+    log.msg("{}".format(os.getcwd() + "> " + cmdline), silent=True)
 
     # First look for command line switches
     # PyBackup -?
