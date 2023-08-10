@@ -15,17 +15,18 @@ from EXIF_Dating import GetExifDate, GetFileDate, GetExifDimensions
 from PyBackup import logging, ReadCrcs, recursive_mkdir, display_update
 
 archive_pictures = "\\Pictures" # the default destination for photo archives
-picture_exts = ['.jpg', '.jpeg',  '.heic',  '.png']
+picture_exts = ['.jpg', '.jpeg', '.heic', '.png']
 
 archive_videos = "\\Movies" # the default destination for movie archives
-video_exts = ['.avi',  '.mpg',  '.mp3',  '.mp4', '.mov',  '.3gp', '.m4v']
+video_exts = ['.avi', '.mp', '.mpg', '.mp3', '.mp4', '.mov', '.3gp', '.m4v']
 
 months = [ "01Jan", "02Feb", "03Mar", "04Apr", "05May", "06Jun",
             "07Jul", "08Aug", "09Sep", "10Oct", "11Nov", "12Dec" ]
 
 filespec = "*"  # which files get archived?
+szFile = "file"
 errors = {}
-stats = {}
+stats = {szFile:0}
 log = None      # logging class instantiations
 record = None
 
@@ -77,7 +78,7 @@ def archive(pn, recursive):
     global archive_pictures, picture_exts
     global archive_videos, video_exts
     global months
-    global log, stats, errors
+    global log, stats, errors, szFile
 
     # Only archive some types of files
     rootp, ext = os.path.splitext(pn)
@@ -85,7 +86,7 @@ def archive(pn, recursive):
     if ext.lower() not in picture_exts + video_exts:
         log.count(stats, "ignored file", pn)
         return
-    record.increment(stats, "file")
+    record.increment(stats, szFile)
 
     # Decide where to archive the file
     if ext.lower() in picture_exts:
@@ -117,10 +118,10 @@ def archive(pn, recursive):
     # Read the CRCs at the destination.
     # If a duplicate CRC exists then delete the source file and done
     crc = crc32(pn)
-    crcs, last_modified = ReadCrcs(log, folder+"\\crc.csv")
-    for crcfn in crcs:
-        if crc == crcs[crcfn]:
-            remove_file(pn, folder+'\\'+crcfn, "duplicate")
+    crcs, last_modified = ReadCrcs(log, folder)
+    if fn in crcs:
+        if crc == crcs[fn]:
+            remove_file(pn, folder+'\\'+fn, "duplicate")
             return
 
     # Try to archive a file simply by renaming it and done
@@ -130,6 +131,11 @@ def archive(pn, recursive):
         return
 
     # Just because two identically named different files exist does not mean we are done.
+
+    # Keep larger files
+    if os.path.getsize(backup_pn) > os.path.getsize(pn):
+        remove_file(pn, backup_pn, "smaller")
+        return
 
     # Replace the backup files with higher resolution files
     # Remove lower resolution files
@@ -233,6 +239,6 @@ if __name__ == '__main__':
 
     # Print the result
     log.msg("\nPhotoBackup complete")
-    stats.pop('file')
+    stats.pop(szFile)
     log.counters(stats)
     log.counters(errors)
