@@ -13,7 +13,6 @@ import glob, os, sys
 
 from JsonFile import JsonFile
 from CmdFile import CmdFile
-from FindCRCs import FindCrcs
 from PyBackup import ReadCrcs
 from Logging import logging, display_update
 
@@ -185,18 +184,18 @@ if __name__ == '__main__':
         cmdline += ' ' + arg
 
     if accumulate:
-        cmdfile = CmdFile("CompareCRCs.cmd")
+        cmdfile = CmdFile("RemoveDuplicates.cmd")
         cmdfile.remark("{}".format(os.getcwd() + "> " + cmdline), silent=True)
         cmdfile.remark("{} removes duplicate files.".format(cmdfile.log.logfile), silent=True)
         cmdfile.remark("Pick which files to remove.", silent=True)
         compare_dictionaries(log, crcs[0], crcs[1], cmdfile)
-        log.msg("\nFindCRCs dictionaries complete.")
+        log.msg("\nCompareCRCs dictionaries complete.")
         log.counters(errors)
 
     else:
-        cmdfile = CmdFile("CompareCRCs.cmd", prefixes=["replace /a",""])
+        cmdfile = CmdFile("AddReplacements.cmd", prefixes=["replace /a",""])
         cmdfile.remark("{}".format(os.getcwd() + "> " + cmdline), silent=True)
         cmdfile.remark("{} adds missing files using replace /a.".format(cmdfile.log.logfile), silent=True)
         compare_folders(log, crcs[0]["pathname"], crcs[1]["pathname"], cmdfile)
-        log.msg("\nFindCRCs folder comparison complete.")
+        log.msg("\nCompareCRCs folder comparison complete.")
         log.counters(errors)
