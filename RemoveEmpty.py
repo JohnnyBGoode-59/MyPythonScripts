@@ -60,6 +60,7 @@ def RemoveEmpty(log, cmd, folder):
 
     if os.path.exists(folder+'\\'+crc_filename):
         os.remove(folder+'\\'+crc_filename)
+        log.count(stats, "removed crc file")
     try:
         os.rmdir(folder)
     except:
@@ -95,5 +96,6 @@ if __name__ == '__main__':
 
     cmd.remark(pybackup_update, prefix="PyBackup -u ", silent=True)
     log.msg("\nRemoveEmpty complete.", silent=True)
+    log.counters(stats)
     log.counters(errors)
     log.msg("Completed in {}".format(timespent()))
