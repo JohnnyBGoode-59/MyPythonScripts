@@ -65,17 +65,13 @@ def GetExifDate(pn):
         ret = exif.get('DateTimeDigitized')
     if ret is not None:
         # validate the date returned, it can be corrupt
-        yr='(19[0-9][0-9]|20[0-9][0-9])'
-        mon=':[0-1][0-9]'
-        day=':[0-3][0-9]'
-        hr=' [0-2][0-9]'
-        minute=sec=':[0-6][0-9]'
-        m = re.search(yr+mon+day+hr+minute+sec, ret)
+        " yyyy:mm:dd hh:mm:ss"
+        m = re.search("([0-9]{4}):([0-9]{2}):([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})", ret)
+        if m is not None and len(m.groups())==6:
+            return list(m.groups())
+        m = re.search("([0-9]{4}):([0-9]{2}):([0-9]{2})", ret)
         if m is not None:
-            return [ ret[0:4], ret[5:7], ret[8:10], ret[11:13], ret[8:10], ret[11:13] ]
-        m = re.search(yr+mon+day, ret)
-        if m is not None:
-            return [ ret[0:4], ret[5:7], ret[8:10] ]
+            return list(m.groups())
         return None
     return ret
 
@@ -95,8 +91,10 @@ def SetExifDate(pn, date):
         exif = {}
     dstr = bytes(dstr, 'utf-8')
     for tag in [DATE_TIME_ORIGINAL, DATE_TIME_DIGITIZED]:
-        if 'Exif' in exif and tag in exif['Exif']:
-            dstr = dstr[:11]+exif['Exif'][tag][11:]
+        # The next two lines preserves the time found in Exif data
+        # But that data can be broken, so let's discard it.
+        # if 'Exif' in exif and tag in exif['Exif']:
+        #    dstr = dstr[:11]+exif['Exif'][tag][11:]
         exif['Exif'][tag] = dstr
     exif_encoded = piexif.dump(exif)
 
