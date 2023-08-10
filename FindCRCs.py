@@ -12,18 +12,17 @@
 
 import glob, os, re, sys
 from JsonFile import JsonFile
-from Logging import logging, timespent
+from Logging import timespent, logging
 from CmdFile import CmdFile
 
-crc_filename = "crc.csv"
-cleanscript_filename = "RemoveDuplicates.cmd"
-json_filename = "FindCRCs.json"
-
-found = 0
-duplicates = 0
+log = None
+cmdfile = None
+szDuplicates = "duplicate file"
+stats = {szDuplicates:0}
 order_switched = False
 
-def help(cmdfile):
+def help():
+    global log, cmdfile
     print("""
     Find-CRCs [-s] [-r] [folders] [-w]
 
@@ -38,12 +37,13 @@ def help(cmdfile):
     and yet continue to use saved data.
 
     Conversely, to purposely use relative folder names, use a dot prefix.""")
+    log.remove()
     cmdfile.remove()
     exit()
 
-def record_duplicate(cmdfile, original, duplicate):
+def record_duplicate(original, duplicate):
     """ Log and record a script that can be used to remove duplicate files. """
-    global duplicates, order_switched
+    global log, cmdfile, szDuplicates, stats, order_switched
 
     # Ignore calls with the exact same pathname for both parameters
     original = os.path.abspath(original.lower())
@@ -56,11 +56,11 @@ def record_duplicate(cmdfile, original, duplicate):
         cmdfile.command(original, duplicate)
     else:
         cmdfile.command(duplicate, original)
-    duplicates = duplicates + 1
+    log.increment(stats, szDuplicates)
 
-def AddCrc(crcs, cmdfile, filename):
+def AddCrc(crcs, filename):
     """ Add CRC values from one file """
-    global found
+    global log, cmdfile, szDuplicates, stats, order_switched
     try:
         f = open(filename)
     except: # open may not find the file
@@ -74,32 +74,35 @@ def AddCrc(crcs, cmdfile, filename):
         if m == None:
             m = re.match('([0-9A-F]{8}),(.*)', line)
         crc = m.group(1)
-        found = found + 1
         pn = rootp + '\\' + m.group(2)
         if crc in crcs:
-            record_duplicate(cmdfile, crcs[crc], pn)
+            record_duplicate(crcs[crc], pn)
         else:
             crcs[crc] = pn
+            log.increment(stats, "original file")
     f.close()
     return crcs
 
-def FindCrcs(crcs, cmdfile, folder):
+def FindCrcs(crcs, folder):
     """ Combine all crcs together from a directory tree """
+    global log, cmdfile, szDuplicates, stats, order_switched
     count = len(crcs)
     for pn in glob.glob(glob.escape(folder)+'/*'):
         rootp, fn = os.path.split(pn)
-        if fn == crc_filename:
-            crcs = AddCrc(crcs, cmdfile, pn)
+        if fn == "crc.csv":
+            crcs = AddCrc(crcs, pn)
         elif os.path.isdir(pn):
-            crcs = FindCrcs(crcs, cmdfile, pn)
-    print("{:,}: crcs added from {}".format(len(crcs)-count, cmdfile.log.nickname(folder)))
+            crcs = FindCrcs(crcs, pn)
+    log.msg("{:,}: crcs added from {}".format(len(crcs)-count, cmdfile.log.nickname(folder)))
     return crcs
 
 if __name__ == '__main__':
     timespent()
 
     # (Re)Create the pathnames (and files) used by this programe
-    jsonfile = JsonFile(json_filename)
+    log = logging("FindCRCs.txt")
+    jsonfile = JsonFile("FindCRCs.json")
+    cleanscript_filename = "RemoveDuplicates.cmd"
     cmdfile = CmdFile(cleanscript_filename)
     processed = []
     crcs = {}
@@ -109,6 +112,7 @@ if __name__ == '__main__':
     rootp, cmdline = os.path.split(sys.argv[0])
     for arg in sys.argv[1:]:
         cmdline += ' ' + arg
+    log.msg("{}".format(os.getcwd() + "> " + cmdline), silent=True)
     cmdfile.remark("{}".format(os.getcwd() + "> " + cmdline), silent=True)
     cmdfile.remark("{} removes duplicate files.".format(cmdfile.log.logfile), silent=True)
     cmdfile.remark("Pick which files to remove.", silent=True)
@@ -120,20 +124,24 @@ if __name__ == '__main__':
                 help()
             elif arg in ['-r', '-R', '/r', '/R']:
                 crcs = jsonfile.read()
+                log.msg("Read jsonfile")
             elif arg in ['-w', '-W', '/w', '/W']:
                 jsonfile.write(crcs)
+                log.msg("Wrote jsonfile")
             elif arg in ['-s', '-S']:
                 order_switched = True
             else:
                 pn= os.path.expandvars(arg) # expand but leave relative, maybe
                 if os.path.isdir(pn):
-                    crcs = FindCrcs(crcs, cmdfile, pn)
+                    crcs = FindCrcs(crcs, pn)
                     processed += [os.path.abspath(pn)]
                 else:
-                    help(cmdfile)
+                    help()
 
-    if duplicates == 0:
-        print("No duplicates found in {:,} files".format(found))
+    log.msg("FindCrcs complete.")
+    log.counters(stats)
+    if stats[szDuplicates] == 0:
+        log.msg("No duplicates found in {:,} files".format(log.sum(stats)))
         cmdfile.remove()
     else:
         # Add an all important command at the end of the cleanscript
@@ -142,5 +150,6 @@ if __name__ == '__main__':
         for folder in processed:
             pybackup_update += ' ' + folder
         cmdfile.remark(pybackup_update, "PyBackup -u ")
-        print("\n{:,} Duplicates found.\n{} ?".format(duplicates, cleanscript_filename))
-    print("{:,} CRCs found. Completed in {}".format(found, timespent()))
+        cmdfile.remark("{:,} Duplicates found.  {} ?".format(stats[szDuplicates], cleanscript_filename))
+    cmdfile.remark("{:,} CRCs found.".format(log.sum(stats)))
+    cmdfile.remark("Completed in {}".format(timespent()))
