@@ -59,8 +59,9 @@ if __name__ == '__main__':
             if sw in 'arst':
                 namespec = arg[1:]
             else:
-                print(  "<filespec> defines which files to rename"
-                        "-namespec: any of 'rsat;\n"
+                print(  "MusicRenamer <filespec> [-<namespec>]\n"
+                        "<filespec> defines which files to rename\n"
+                        "<namespec>: any of 'rsat:\n"
                         "    r: random number\n"
                         "    s: sequential number\n"
                         "    a: artist\n"

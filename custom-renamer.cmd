@@ -8,4 +8,4 @@ sort <%tfile%.unsorted >%tfile%
 del %tfile%.unsorted
 "C:\Program Files (x86)\Notepad++\notepad++.exe" %tfile%
 call %tfile%
-del %tfile%
+rem del %tfile%
