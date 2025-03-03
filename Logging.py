@@ -89,12 +89,15 @@ class logging:
         if pn2 != None:
             cmd += ' "{}"'.format(pn2)
 
-        log = open(self.logfile, 'a')
-        log.write(cmd + '\n')
-        log.close()
-        if not silent:
-            print(cmd)
-            now = time.time()
+        try:
+            log = open(self.logfile, 'a')
+            log.write(cmd + '\n')
+            log.close()
+            if not silent:
+                print(cmd)
+                now = time.time()
+        except:
+            pass
 
     def count(self, counters, name, pathname=None, silent=False):
         """ Log message that includes a counter and possible a pathname """
@@ -103,12 +106,15 @@ class logging:
         if pathname != None:
             fullmsg = '"' + pathname + '": ' + fullmsg
             shortmsg = self.nickname(pathname) + ": " + shortmsg
-        log = open(self.logfile, 'a')
-        log.write(fullmsg)
-        log.close()
-        if not silent:
-            print(shortmsg)
-            now = time.time()
+        try:
+            log = open(self.logfile, 'a')
+            log.write(fullmsg)
+            log.close()
+            if not silent:
+                print(shortmsg)
+                now = time.time()
+        except:
+            pass
         self.increment(counters, name)
         return counters
 
@@ -120,12 +126,15 @@ class logging:
         if pathname != None:
             fullmsg = '"' + pathname + '": ' + fullmsg
             shortmsg = self.nickname(pathname) + ": " + shortmsg
-        log = open(self.logfile, 'a')
-        log.write(fullmsg)
-        log.close()
-        if not silent:
-            print(shortmsg)
-            now = time.time()
+        try:
+            log = open(self.logfile, 'a')
+            log.write(fullmsg)
+            log.close()
+            if not silent:
+                print(shortmsg)
+                now = time.time()
+        except:
+            pass
         self.increment(counters, err)
         return counters
 
