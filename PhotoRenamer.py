@@ -27,7 +27,7 @@ def help():
     print("""
     PhotoRenamer [options] [filespec]
     Rename files to include a datestamp in the filename.
-    When add exif date data when it does not exist.
+    Add exif date data when it does not exist.
 
     -s  Strip any existing date found in the current filename
     -f  ignore existing exif data and use the date found in the Filename instead
@@ -68,6 +68,8 @@ def rename(pn, strip, reset):
 
         # If the file has no EXIF date
         if exif_date is None:
+            reset = True
+
             # and a file date is not available either
             if file_date is None:
                 # Use the file modification date when requested to do so
