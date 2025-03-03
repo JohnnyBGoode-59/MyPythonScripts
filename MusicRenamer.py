@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
     # Parse the command line
     for arg in sys.argv[1:]:
-        if arg[0] == '-':
+        if arg[0] in ['-', '/']:
             sw = arg[1].lower()
             if sw in 'arst':
                 namespec = arg[1:]
