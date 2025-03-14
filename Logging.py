@@ -10,6 +10,7 @@
 #-------------------------------------------------------------------------------
 
 import os, time, sys
+import porting
 
 now = None
 
@@ -57,9 +58,9 @@ class logging:
         if rootp == '':
             rootp = os.environ.get('TEMP')
             if rootp is None:
-                raise Exception("TEMP environment variable is not defined")
+                rootp = porting.addpath('', 'tmp')  # Linux default
 
-        self.logfile = os.path.abspath(rootp + '\\' + fn)
+        self.logfile = os.path.abspath(porting.addpath(rootp, fn))
         self.style = [style[0]+style[1]+5] + style
         if clean:
             self.remove()

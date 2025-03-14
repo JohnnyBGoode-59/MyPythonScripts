@@ -13,6 +13,7 @@ import glob, os, re, sys, time, zlib
 from shutil import copyfile
 from crc32 import crc32
 from Logging import logging, display_update, timespent
+import porting
 
 crc_filename = "crc.csv"        # the control file found in every folder
 
@@ -37,7 +38,7 @@ def ReadCrcs(log, pn):
     """ Return a dictionary of CRC values for every file in a folder """
     global crc_filename, errors
     crcs = {}
-    filename = pn+'\\'+crc_filename
+    filename = porting.addpath(pn, crc_filename)
     try:
         f = open(filename)
     except: # open may not find the file
@@ -91,7 +92,7 @@ def WriteCrcs(log, pn, crcs):
     """ Save a dictionary of CRC values for every file in a folder """
     global crc_filename, errors
     try:
-        filename = pn+'\\'+crc_filename
+        filename = porting.addpath(pn, crc_filename)
         f = open(filename, 'w')
         for fn in sorted(crcs):
             # Quote the pathname to make it work better in Excel
@@ -123,13 +124,13 @@ def verify(log, source, update=False):
     if not missing:
         rootp, fn = os.path.split(source)
         for fn in dict(source_crcs).keys():
-            pn = source + '\\' + fn
+            pn = porting.addpath(source, fn)
             if not os.path.exists(pn):
                 log.error(errors, "missing source file", pn)
                 source_crcs.pop(fn)
 
     # Recursively search the source folder
-    for pn in glob.glob(glob.escape(source) + '\\*'):
+    for pn in glob.glob(porting.addpath(glob.escape(source), '*')):
         rootp, fn = os.path.split(pn)
         display_update(stats[szFile], szFile)
         if os.path.isfile(pn):
@@ -203,7 +204,7 @@ def main(log, source, dest):
     # Prune out the crc values for any files that no longer exist
     if source_modified != None:
         for fn in dict(source_crcs).keys():
-            pn = source + '\\' + fn
+            pn = porting.addpath(source, fn)
             if not os.path.exists(pn):
                 log.error(errors, "missing source file", pn)
                 source_crcs.pop(fn)
@@ -211,13 +212,13 @@ def main(log, source, dest):
     # Prune out the crc values for any files that no longer exist
     if dest_modified != None:
         for fn in dict(dest_crcs).keys():
-            pn = dest + '\\' + fn
+            pn = porting.addpath(dest, fn)
             if not os.path.exists(pn):
                 log.error(errors, "missing destination file", pn)
                 dest_crcs.pop(fn)
 
     # Recursively search the source folder
-    for pn in glob.glob(glob.escape(source) + '\\*'):
+    for pn in glob.glob(porting.addpath(glob.escape(source), '*')):
         rootp, fn = os.path.split(pn)
         display_update(stats[szFile], szFile)
         if os.path.isfile(pn):
@@ -225,7 +226,7 @@ def main(log, source, dest):
                 pass
             else:
                 # For every file in the source folder
-                dest_pn = dest + '\\' + fn
+                dest_pn = porting.addpath(dest, fn)
                 log.increment(stats, szFile)
 
                 # When source_modified is None, source_crcs is empty
@@ -268,7 +269,7 @@ def main(log, source, dest):
 
         elif os.path.isdir(pn):
             # For every subfolder
-            main(log, pn, dest+'\\'+fn)
+            main(log, pn, porting.addpath(dest, fn))
 
     # Finish off by replacing CRC files
     WriteCrcs(log, source, source_crcs)
@@ -277,7 +278,7 @@ def main(log, source, dest):
 def help():
     """ display command line help and exit """
     print(  "\nPyBackup can be used several ways"
-            "\n1) no parameters\t-- backup folders using ~\\backup.ini"
+            "\n1) no parameters\t-- backup folders using ~/backup.ini"
             "\n2) souce dest\t\t-- backup one folder"
             "\n3) -u [folders]\t\t-- update recorded crcs in a list of folders"
             "\n4) -v [folders]\t\t-- validate current crcs in a list of folders")
@@ -293,7 +294,7 @@ if __name__ == '__main__':
     """ There are three ways to use this program.
         You can backup a single folder (and children) to a specified destination.
         You can backup a set of folders to respective destinations using an ini file.
-        Or you can check the CRC integrety for a list of folders.
+        Or you can check the CRC integrity for a list of folders.
 
         CRC values are used to make it possible to skip copying files that
         have not changed since a previous backup.
@@ -315,13 +316,13 @@ if __name__ == '__main__':
     # PyBackup -?
     # PyBackup -u pathname
     # PyBackup -v pathname
-    if len(sys.argv) >= 2 and sys.argv[1][0] in ['-', '/']:
+    if len(sys.argv) >= 2 and sys.argv[1][0] == '-':
 
         # PyBackup -v [folders]
         # Verify CRCs for each folder listed
         if sys.argv[1][1] in ['u', 'U', 'v', 'V']:
             for pn in sys.argv[2:]:
-                pathname = os.path.abspath(os.path.expandvars(pn))
+                pathname = porting.abspath(pn)
                 update = sys.argv[1][1] in ['u', 'U']   # True or False
                 verify(log, pathname, update)
             display_summary(log, "Verify", start)
@@ -335,15 +336,15 @@ if __name__ == '__main__':
     # PyBackup source destination
     if len(sys.argv) == 3:
         """ A source and destination was provided. Backup one folder """
-        srcp = os.path.abspath(os.path.expandvars(sys.argv[1]))
-        destp = os.path.abspath(os.path.expandvars(sys.argv[2]))
+        srcp = porting.abspath(sys.argv[1])
+        destp = porting.abspath(sys.argv[2])
         main(log, srcp, destp)
         display_summary(log, "Backup", start)
         exit()
 
     # PyBackup inifile
     elif len(sys.argv) == 2:
-        ini_filename = os.path.abspath(os.path.expandvars(sys.argv[1]))
+        ini_filename = porting.abspath(sys.argv[1])
         if not os.path.isfile(ini_filename):
             help()
 
@@ -373,7 +374,7 @@ if __name__ == '__main__':
             # Match two quoted names separated by a comma
             m = re.match('"(.*?)","(.*?)"', line)
             if m != None:
-                main(log, os.path.abspath(m.group(1)), os.path.abspath(m.group(2)))
+                main(log, porting.abspath(m.group(1)), porting.abspath(m.group(2)))
             else:
                 log.error(errors, "inifile syntax error", line[:-1])
     f.close()
