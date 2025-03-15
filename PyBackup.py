@@ -350,13 +350,8 @@ if __name__ == '__main__':
 
     # PyBackup
     else:
-        # Switch to the %USERPROFILE% folder where Backup.ini should reside.
-        userprofile = os.environ.get('USERPROFILE')
-        if userprofile is None:
-            print("USERPROFILE is not defined as an environment variable")
-            exit()
-        os.chdir(userprofile)
-        ini_filename = "backup.ini"
+        # When no command line is used, read PyBackup.ini from the user root folder.
+        ini_filename = porting.abspath("~/PyBackup.ini")
 
     """ Use an ini file that identifies source and destination folders.
         Copy all files in the source that do not exist in the destination.
