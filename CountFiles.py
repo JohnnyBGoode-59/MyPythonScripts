@@ -11,6 +11,7 @@
 
 import glob, os, sys, zlib
 import time
+import porting
 
 now = 0
 found = 0
@@ -32,7 +33,7 @@ def main(pn):
     count = 0
     # display_update()
     # for fn in os.listdir(pn):
-    # fpn = pn + '\\' + fn
+    # fpn = pn + '/' + fn
     for fpn in glob.glob(glob.escape(pn)+'/*'):
         if os.path.isfile(fpn):
             found = found + 1
@@ -47,9 +48,9 @@ if __name__ == '__main__':
     print("Count,Pathname")
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:
-            if os.path.isdir(arg):
-                main(arg)
+            pn = porting.abspath(arg)
+            if os.path.isdir(pn):
+                main(pn)
     else:
-        home = os.environ.get('HOMEDRIVE')+'\\'+os.environ.get('HOMEPATH')
-        main(home + '\\' + "Pictures")
+        main(porting.abspath("~/Pictures"))
     print("{:,} found".format(found))
