@@ -16,5 +16,5 @@ def abspath(pn):
     """ Take all abbreviations and shortcuts out of a pathname. """
     return os.path.abspath(os.path.expandvars(os.path.expanduser(pn)))
 
-def addpath(rootp, filep):
-    return rootp + os.sep + filep
+def addpath(*args):
+    return os.sep.join(args)

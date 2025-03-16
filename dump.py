@@ -39,7 +39,8 @@ if __name__ == '__main__':
 
     # Process the command line arguments
     for arg in sys.argv[1:]:
-        for fn in glob.glob(glob.escape(arg)):
+        pn = os.path.abspath(os.path.expandvars(os.path.expanduser(arg)))
+        for fn in glob.glob(glob.escape(pn)):
             if os.path.isfile(fn):
                 main(fn)
             elif not os.path.isdir(fn):

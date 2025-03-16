@@ -32,13 +32,13 @@ def crc32pn(pn, recursive):
 
     if os.path.isdir(pn):
         # Use filespec to find files and folders within a folder
-        for fn in glob.glob(glob.escape(pn) + '\\' + filespec):
+        for fn in glob.glob(glob.escape(pn) + os.sep + filespec):
             if os.path.isfile(fn):
                 crc32pn(fn, recursive)  # process files
 
         # Perform recursion
         if recursive:
-            for fn in glob.glob(glob.escape(pn) + "\\*"):
+            for fn in glob.glob(glob.escape(pn) + os.sep + "*"):
                 if os.path.isdir(fn):
                     crc32pn(fn, recursive)
     else:
@@ -69,7 +69,7 @@ if __name__ == '__main__':
             if arg[1].lower() == 'r':
                 recursive = True
         else:
-            main(os.path.abspath(arg), recursive)
+            main(os.path.abspath(os.path.expanduser(arg)), recursive)
             count += 1
 
     if count == 0:

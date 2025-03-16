@@ -12,6 +12,7 @@
 import glob, re, os, sys
 from PIL import Image
 from PIL.ExifTags import TAGS
+# sudo apt install python3.piexif
 import piexif
 
 today = ["2020", "08", "19", "12", "00", "00"]
@@ -108,7 +109,7 @@ def GetFileDate(fn):
     global today
 
     # Allow any separator in this list
-    sep = "[\-\._~ ]*?" # optional separators: the dash has to be escaped
+    sep = "[\\-\\._~ ]*?" # optional separators: the dash has to be escaped
 
     # yyyy-mm-dd_hh-mm-ss (yyyy must start with 19 or 20)
     yyyy = "(19[0-9][0-9]|20[0-9][0-9])"+sep
@@ -139,7 +140,7 @@ def GetFileDate(fn):
 
     # mmddyyhhmm[a-f]*.
     mm = dd = yy = hr = min = "([0-9][0-9])"
-    m = re.search("^"+mm+dd+yy+hr+min+"[a-f]*([-~(][0-9]*[)]*)*\.", fn)
+    m = re.search("^"+mm+dd+yy+hr+min+"[a-f]*([-~(][0-9]*[)]*)*\\.", fn)
     if m is not None:
         today[0] = "20"+m.group(3)
         today[1] = m.group(1)
