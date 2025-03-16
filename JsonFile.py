@@ -17,21 +17,11 @@ class JsonFile:
     verbose = False
 
     def __init__(self, filename, clean=False, verbose=False):
-        """ filename can be a fully qualifed pathname or simple filename.
-            If a path is supplied, it will be used. Otherwise the TEMP
-            environment variable will be used to construct the pathname.
-
+        """ filename can be a fully qualified pathname or simple filename.
             If desired, any pre-existing json file can be removed during initialization.
-
             If desired, print messages will occur to detail actions.
         """
-        rootp, fn = os.path.split(filename)
-        if rootp == '':
-            rootp = os.environ.get('TEMP')
-            if rootp is None:
-                raise Exception("TEMP environment variable is not defined")
-
-        self.jsonPathname = os.path.abspath(rootp + '\\' + fn)
+        self.jsonPathname = os.path.abspath(os.path.expandvars(os.path.expanduser(filename)))
         self.verbose = verbose
         if clean:
             self.remove()
@@ -47,7 +37,7 @@ class JsonFile:
             with open(self.jsonPathname) as jf:
                 data = json.load(jf)
             self.report("{} read".format(self.jsonPathname))
-            return json.loads(data)
+            return data
         except:
             raise Exception("{} could not be read".format(self.jsonPathname))
 
@@ -85,7 +75,7 @@ if __name__ == '__main__':
     if mydict == testdict:
         print(mydict)
     else:
-        print("ERROR: dictinary mismatch")
+        print("ERROR: dictionary mismatch")
 
     # Now repeat that process quietly
     test = JsonFile(testfile, clean=True)
@@ -101,7 +91,7 @@ if __name__ == '__main__':
     if mydict == testdict:
         print(mydict)
     else:
-        print("ERROR: dictinary mismatch")
+        print("ERROR: dictionary mismatch")
 
     # Now read an existing file quietly
     finaltest = JsonFile(testfile)
@@ -109,7 +99,7 @@ if __name__ == '__main__':
     if finalresult == testdict:
         print(mydict)
     else:
-        print("ERROR: dictinary mismatch")
+        print("ERROR: dictionary mismatch")
 
     # Check cleanup verbosely
     finaltest = JsonFile(testfile, clean=True, verbose=True)
