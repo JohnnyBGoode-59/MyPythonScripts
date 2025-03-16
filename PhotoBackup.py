@@ -13,11 +13,14 @@ import glob, re, os, sys
 from crc32 import crc32
 from EXIF_Dating import GetExifDate, GetFileDate, GetExifDimensions
 from PyBackup import logging, ReadCrcs, recursive_mkdir, display_update
+import porting
 
-archive_pictures = "\\Pictures" # the default destination for photo archives
+# the default destination for photo archives
+archive_pictures = porting.abspath("~/Pictures")
 picture_exts = ['.jpg', '.jpeg', '.heic', '.png']
 
-archive_videos = "\\Movies" # the default destination for movie archives
+# the default destination for video archives
+archive_videos = porting.abspath("~/Videos")
 video_exts = ['.avi', '.mp', '.mpg', '.mp3', '.mp4', '.mov', '.3gp', '.m4v']
 
 months = [ "01Jan", "02Feb", "03Mar", "04Apr", "05May", "06Jun",
@@ -74,7 +77,7 @@ def replace_destination(src, dest, reason):
         log.error(errors, "rename error", src)
 
 def archive(pn, recursive):
-    """ Archive one picture or movie in it's proper place """
+    """ Archive one picture or movie in its proper place """
     global archive_pictures, picture_exts
     global archive_videos, video_exts
     global months
@@ -106,11 +109,11 @@ def archive(pn, recursive):
     year = date[0]
     month = months[int(date[1])-1]
     #dbg print("The date in {} is {}".format(fn, ymd))
-    folder = dir_archives + '\\' + year + '\\' + month
+    folder = porting.addpath(dir_archives, year, month)
 
     # A destination pathname has been computed
     # if it is the same as the source, we are done.
-    backup_pn = folder + '\\' + fn
+    backup_pn = porting.addpath(folder, fn)
     if pn.lower() == backup_pn.lower():
         return
     recursive_mkdir(folder)
@@ -121,11 +124,11 @@ def archive(pn, recursive):
     crcs, last_modified = ReadCrcs(log, folder)
     if fn in crcs:
         if crc == crcs[fn]:
-            remove_file(pn, folder+'\\'+fn, "duplicate")
+            remove_file(pn, porting.addpath(folder, fn), "duplicate")
             return
 
     # Try to archive a file simply by renaming it and done
-    # That should work if the destination flie is not currently present
+    # That should work if the destination file is not currently present
     if not os.path.exists(backup_pn):
         replace_destination(pn, backup_pn, "new")
         return
@@ -159,37 +162,12 @@ def archive(pn, recursive):
     log.count(errors, "unarchived file", pn)
     return
 
-def getfolder(sourcep, filetype):
-    """ Pick which folder to use to archive files of a particular file type """
-
-    # The returned value must be on the same drive because rename is used
-    sourcep = os.path.abspath(sourcep)
-    drive = sourcep[0:2].upper()
-
-    # Start by looking for an environment variable with the same name
-    folder = os.environ.get(filetype)
-    if folder is not None:
-        folder = os.path.expandvars(folder)
-        if folder[:2].upper() == drive:
-            return folder
-
-    # Next look for a folder under USERPROFILE
-    folder = os.environ.get('USERPROFILE')
-    if folder is not None:
-        folder = os.path.expandvars(folder)
-        if folder[:2].upper() == drive:
-            return folder + '\\' + filetype
-
-    # If all else fails, use a folder based upon the source pathname and filetype
-    rootp, fn = os.path.split(sourcep)
-    return rootp + '\\' + filetype
-
 def main(pn, recursive):
     """ Process files and possibly folders starting with a folder """
     found = 0
 
     # Process just the files in a folder
-    for fn in glob.glob(glob.escape(pn) + '\\' + filespec):
+    for fn in glob.glob(porting.addpath(glob.escape(pn), filespec)):
         found += 1
         display_update(found, "found")
         if os.path.isfile(fn):
@@ -200,7 +178,7 @@ def main(pn, recursive):
         # Note that the saved filespec cannot be used here
         print("{}: scanning".format(pn))
         display_update(found, True)
-        for pn in glob.glob(glob.escape(pn) + "\\*"):
+        for pn in glob.glob(porting.addpath(glob.escape(pn), "*")):
             found += 1
             display_update(found, "found")
             if os.path.isdir(pn):
@@ -215,23 +193,19 @@ if __name__ == '__main__':
     folder = os.getcwd();   # <path>: use a path other than the current working directory
     recursive = False       # -r: recursively process subfolders
     for arg in sys.argv[1:]:
-        if arg[0] in ['-', '/']:
+        pn = porting.abspath(arg)
+        if arg[0] == '-':
             if arg[1].lower() == 'r':
                 recursive = True
             else:
                 help()
-        elif os.path.isdir(arg):
-            folder = arg
+        elif os.path.isdir(pn):
+            folder = pn
         else:
-            folder, filespec = os.path.split(os.path.expandvars(arg))
-            folder = os.path.abspath(folder)
+            folder, filespec = os.path.split(pn)
             if not os.path.isdir(folder):
                 log.error(errors, "not a folder", folder)
                 help()
-
-    # Define the alternative locations to archive pictures and movies
-    archive_pictures = getfolder(folder, 'Pictures')
-    archive_videos = getfolder(folder, 'Videos')
 
     # Find and process folders
     display_update(0, True)
