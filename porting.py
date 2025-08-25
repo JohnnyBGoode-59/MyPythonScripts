@@ -1,6 +1,6 @@
 #-------------------------------------------------------------------------------
 # Name: porting
-# Purpose: Simple procedures to simply porting from Windows to Linux (Ubuntu)
+# Purpose: Simple procedures to simplify porting from Windows to Linux (Ubuntu)
 #
 # Author: John Eichenberger
 #

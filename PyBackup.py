@@ -365,7 +365,7 @@ if __name__ == '__main__':
 
     # Allow exceptions for the rest
     for line in f:
-        if line[0] != '#':
+        if not line[0] in "#\n\r":
             # Match two quoted names separated by a comma
             m = re.match('"(.*?)","(.*?)"', line)
             if m != None:

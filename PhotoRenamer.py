@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Name: Photo-Renamer
+# Name: PhotoRenamer
 # Purpose:  Rename photos based upon the EXIF date for those photos.
 #   Add a EXIF date when the filename contains a date but the EXIF data is missing.
 #

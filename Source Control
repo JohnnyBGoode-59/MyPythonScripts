@@ -1,0 +1,13 @@
+sudo apt install git
+cd ~/Documents/Python
+
+# Clone MyPythonScripts locally from github
+# When signing into Github, use Authy on my phone for the two factor auth
+# Change my Github username
+git init
+git config --global user.email johnnybgoode.072559@gmail.com
+git config --global user.name JohnnyBGoode-59
+cd ~/Documents
+git clone https://github.com/JohnnyBGoode-59/MyPythonScripts.git Python
+
+# Commit and push changes
